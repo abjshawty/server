@@ -1,4 +1,4 @@
-import { server } from './app'
+import server from './app'
 
 // Create a way to access environment variables
 import { config } from 'dotenv'

@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { server } from '../app';
 import { getAllRoutes } from "../utils";
+import server from '../app';
 
 function testRoutesFactory(){
     // Create a router for specific subfolders of requests

@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { router } from './router';
+import router from './router';
 
 function init(){
     // Create Express Server
@@ -26,4 +26,4 @@ function init(){
 }
 
 // Exports
-export const server = init()
+export default init()

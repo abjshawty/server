@@ -19,4 +19,4 @@ function init(){
 }
 
 // Exoprt the route module
-export const router = init();
+export default init();
