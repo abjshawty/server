@@ -4,7 +4,7 @@ class Controller<T> {
     constructor(collection: string) {
         this.collection = client[collection];
     }
-    async create(data: T) {
+    async create(data: T): Promise<T> {
         try {
             return await this.collection.create({
                 data
@@ -14,7 +14,7 @@ class Controller<T> {
             throw error;
         }
     }
-    async getById(id: string) {
+    async getById(id: string): Promise<T> {
         try {
             return await this.collection.findUnique({
                 where: {
@@ -26,7 +26,7 @@ class Controller<T> {
             throw error;
         }
     }
-    async getAll() {
+    async getAll(): Promise<T[]> {
         try {
             return await this.collection.findMany();
         } catch (error: any) {
@@ -34,7 +34,7 @@ class Controller<T> {
             throw error;
         }
     }
-    async update(id: string, data: Partial<T>) {
+    async update(id: string, data: Partial<T>): Promise<T> {
         try {
             return await this.collection.update({
                 where: {
@@ -47,7 +47,7 @@ class Controller<T> {
             throw error;
         }
     }
-    async delete(id: string) {
+    async delete(id: string): Promise<T> {
         try {
             return await this.collection.delete({
                 where: {
@@ -59,7 +59,7 @@ class Controller<T> {
             throw error;
         }
     }
-    async search(query: { [key: string]: string; }, options: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }; }) {
+    async search(query: { [key: string]: string; }, options: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }; }): Promise<T[]> {
         try {
             return await this.collection.findMany({
                 where: {
@@ -72,7 +72,13 @@ class Controller<T> {
             throw error;
         }
     }
-    async vagueSearch(query: { [key: string]: string; }, options: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }, vague?: boolean; }) {
+    async vagueSearch(query: { [key: string]: string; }, options: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }, vague?: boolean; }): Promise<{
+        record: Promise<T>,
+        count: Promise<Number>,
+        items: Promise<Number>,
+        pages: Number,
+        currentPage: Number;
+    }> {
         const where = Object.keys(query).length !== 0 ? {
             OR: Object.keys(query).map(key => ({
                 [key]: {
