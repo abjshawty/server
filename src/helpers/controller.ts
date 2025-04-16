@@ -59,7 +59,7 @@ class Controller<T> {
             throw error;
         }
     }
-    async search(query: { [key: string]: string; }, options: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }; }): Promise<T[]> {
+    async search(query: { [key: string]: string; }, options: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }, include: { [key: string]: boolean; }; }): Promise<T[]> { // TODO: Implement type recognition for include
         try {
             return await this.collection.findMany({
                 where: {
@@ -72,7 +72,7 @@ class Controller<T> {
             throw error;
         }
     }
-    async vagueSearch(query: { [key: string]: string; }, options: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }, vague?: boolean; }): Promise<{
+    async vagueSearch(query: { [key: string]: string; }, options: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }, vague?: boolean, include?: { [key: string]: boolean; }; }): Promise<{ // TODO: Implement type recognition for include
         record: Promise<T>,
         count: Promise<Number>,
         items: Promise<Number>,
