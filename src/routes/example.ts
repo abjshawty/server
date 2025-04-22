@@ -16,6 +16,14 @@ const routes: FastifyPluginCallback = (server) => {
 
     server.route({
         method: "GET",
+        url: "/export/:format",
+        handler: async (request: FastifyRequest<{ Params: { format: string; }; }>, reply: FastifyReply) => {
+            await Service.export(request.params.format, reply);
+        }
+    });
+
+    server.route({
+        method: "GET",
         url: "/search",
         schema: Schema.search,
         handler: async (request: FastifyRequest<{ Querystring: { name: string; }; }>, reply: FastifyReply) => {
