@@ -27,7 +27,7 @@ const routes: FastifyPluginCallback = (server) => {
         url: "/search",
         schema: Schema.search,
         handler: async (request: FastifyRequest<{ Querystring: { name: string; }; }>, reply: FastifyReply) => {
-            const result = await Service.search(request.query);
+            const result = await Service.search(request.query, { include: { ExampleAttach: true } });
             reply.send({ data: result });
         }
     });

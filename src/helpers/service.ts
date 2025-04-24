@@ -1,6 +1,8 @@
 import { FastifyReply } from "fastify";
 import Controller from "./controller";
 class Service<T extends object> {
+    // TODO: Implement default validators
+    // TODO: Implement custom validators
     controller: Controller<T>;
     constructor (controller: Controller<T>) {
         this.controller = controller;
@@ -51,9 +53,18 @@ class Service<T extends object> {
             throw error;
         }
     }
-    async search (query: { [key: string]: string; }, options?: { page?: number, take?: number, orderBy?: { [key: string]: "asc" | "desc"; }; }, strict: boolean = false) {
+    async search (
+        query: { [key in keyof T]?: string; },
+        options?: {
+            page?: number,
+            take?: number,
+            orderBy?: { [key in keyof T]?: "asc" | "desc"; };
+            include?: { [key: string]: boolean; };
+        },
+        strict: boolean = false
+    ) {
         try {
-            let passingOptions: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }; };
+            let passingOptions: { take: number, skip: number, orderBy?: { [key in keyof T]?: "asc" | "desc"; }; };
             if (!options) passingOptions = {
                 take: 10,
                 skip: 0
@@ -65,7 +76,9 @@ class Service<T extends object> {
                     orderBy: options.orderBy
                 };
             }
-            return strict ? await this.controller.search(query, passingOptions) : await this.controller.vagueSearch(query, passingOptions);
+            return strict
+                ? await this.controller.search(query, passingOptions)
+                : await this.controller.paginatedSearch(query, passingOptions);
         } catch (error: any) {
             if (!error.statusCode) error.statusCode = "500";
             throw error;
@@ -73,6 +86,7 @@ class Service<T extends object> {
     }
 
     async export (format: string, reply: FastifyReply) {
+        // TODO: Add Options
         try {
             switch (format) {
                 case 'pdf':

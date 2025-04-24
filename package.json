@@ -1,6 +1,6 @@
 {
     "name": "server",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "private": true,
     "description": "Server",
     "main": "build/index.js",
@@ -11,7 +11,8 @@
         "test": "jest --watchAll",
         "gen": "npx prisma generate",
         "migrate": "npx prisma migrate dev --name dev",
-        "prestart": "npm i && npx prisma migrate reset --force && npx prisma migrate dev --name dev && nodemon src/index.ts"
+        "hard-dev": "npm i && npx prisma migrate reset --force && npx prisma migrate dev --name dev && nodemon src/index.ts",
+        "prestart": "npm i && npx prisma migrate reset --force && npx prisma migrate dev --name dev && tsc && node build/index.js"
     },
     "dependencies": {
         "@fastify/cors": "11.0.1",

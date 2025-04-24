@@ -7,7 +7,7 @@ class Controller<T extends object> {
     private name: string;
     constructor (collection: string) {
         this.collection = client[collection];
-        this.name = collection;
+        this.name = collection.charAt(0).toUpperCase() + collection.slice(1);
     }
     async create (data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T> {
         try {
@@ -64,7 +64,15 @@ class Controller<T extends object> {
             throw error;
         }
     }
-    async search (query: { [key: string]: string; }, options: { take?: number, skip?: number, orderBy?: { [key: string]: "asc" | "desc"; }, include?: { [key: string]: boolean; }; }): Promise<T[]> { // TODO: Implement type recognition for include
+    async search (
+        query: { [key in keyof T]?: string; },
+        options?: {
+            take?: number,
+            skip?: number,
+            orderBy?: { [key in keyof T]?: "asc" | "desc"; },
+            include?: { [key: string]: boolean; };
+        }
+    ): Promise<T[]> { // TODO: Implement type recognition for include
         try {
             return await this.collection.findMany({
                 where: {
@@ -77,7 +85,15 @@ class Controller<T extends object> {
             throw error;
         }
     }
-    async vagueSearch (query: { [key: string]: string; }, options: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }, vague?: boolean, include?: { [key: string]: boolean; }; }): Promise<{ // TODO: Implement type recognition for include
+    async paginatedSearch (
+        query: { [key in keyof T]?: string; },
+        options: {
+            take: number,
+            skip: number,
+            orderBy?: { [key in keyof T]?: "asc" | "desc"; },
+            include?: { [key: string]: boolean; };
+        }
+    ): Promise<{ // TODO: Implement type recognition for include
         record: Promise<T>,
         count: Promise<Number>,
         items: Promise<Number>,
@@ -115,25 +131,34 @@ class Controller<T extends object> {
             throw error;
         }
     }
-    async exportAsPdf (reply: FastifyReply) {
+    async exportAsPdf (reply: FastifyReply, options?: { take: number, skip: number, orderBy?: { [key in keyof T]?: "asc" | "desc"; }, omit?: { [key in keyof Omit<T, 'id' | 'createdAt' | 'updatedAt'>]?: boolean; }; }) {
+        const defaultOmit = {
+            id: true,
+            createdAt: true,
+            updatedAt: true
+        };
         try {
             const data: T[] = await this.collection.findMany({
-                // TODO: Implement type recognition for omit
-                // TODO: Add parameter for optional omit attributes
                 omit: {
-                    id: true,
-                    createdAt: true,
-                    updatedAt: true
+                    ...defaultOmit,
+                    ...options?.omit
                 }
             });
-            // const data = await client.example.findMany({});
             const document = new pdfTable();
             document.fontSize(10).text(this.name, { align: 'center' });
             document.moveDown();
-            const table = {
-                headers: Object.keys(data[0]),
-                rows: data.map(object => Object.values(object))
-            };
+            let table = {};
+            if (data.length === 0) {
+                table = {
+                    headers: ['Empty Database'],
+                    rows: []
+                };
+            } else {
+                table = {
+                    headers: Object.keys(data[0]),
+                    rows: data.map(object => Object.values(object))
+                };
+            }
             await document.table(table);
             document.end();
             return reply
