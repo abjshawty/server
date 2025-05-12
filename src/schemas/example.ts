@@ -41,6 +41,5 @@ export const update = {
         properties: {
             name: { type: "string" },
         },
-        required: ["name"],
     },
 };

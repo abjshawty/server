@@ -1,10 +1,15 @@
+// Require is used here because of typescript errors
+const pdfTable = require("pdfkit-table");
+import { FastifyReply } from "fastify";
 import { client } from "../db";
-class Controller<T> {
+class Controller<T extends object> {
     private collection: any;
-    constructor(collection: string) {
+    private name: string;
+    constructor (collection: string) {
         this.collection = client[collection];
+        this.name = collection.charAt(0).toUpperCase() + collection.slice(1);
     }
-    async create(data: T) {
+    async create (data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T> {
         try {
             return await this.collection.create({
                 data
@@ -14,7 +19,7 @@ class Controller<T> {
             throw error;
         }
     }
-    async getById(id: string) {
+    async getById (id: string): Promise<T> {
         try {
             return await this.collection.findUnique({
                 where: {
@@ -26,7 +31,7 @@ class Controller<T> {
             throw error;
         }
     }
-    async getAll() {
+    async getAll (): Promise<T[]> {
         try {
             return await this.collection.findMany();
         } catch (error: any) {
@@ -34,7 +39,7 @@ class Controller<T> {
             throw error;
         }
     }
-    async update(id: string, data: Partial<T>) {
+    async update (id: string, data: Partial<T>): Promise<T> {
         try {
             return await this.collection.update({
                 where: {
@@ -47,7 +52,7 @@ class Controller<T> {
             throw error;
         }
     }
-    async delete(id: string) {
+    async delete (id: string): Promise<T> {
         try {
             return await this.collection.delete({
                 where: {
@@ -59,7 +64,15 @@ class Controller<T> {
             throw error;
         }
     }
-    async search(query: { [key: string]: string; }, options: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }; }) {
+    async search (
+        query: { [key in keyof T]?: string; },
+        options?: {
+            take?: number,
+            skip?: number,
+            orderBy?: { [key in keyof T]?: "asc" | "desc"; },
+            include?: { [key: string]: boolean; };
+        }
+    ): Promise<T[]> { // TODO: Implement type recognition for include
         try {
             return await this.collection.findMany({
                 where: {
@@ -72,7 +85,21 @@ class Controller<T> {
             throw error;
         }
     }
-    async vagueSearch(query: { [key: string]: string; }, options: { take: number, skip: number, orderBy?: { [key: string]: "asc" | "desc"; }, vague?: boolean; }) {
+    async paginatedSearch (
+        query: { [key in keyof T]?: string; },
+        options: {
+            take: number,
+            skip: number,
+            orderBy?: { [key in keyof T]?: "asc" | "desc"; },
+            include?: { [key: string]: boolean; };
+        }
+    ): Promise<{ // TODO: Implement type recognition for include
+        record: Promise<T>,
+        count: Promise<Number>,
+        items: Promise<Number>,
+        pages: Number,
+        currentPage: Number;
+    }> {
         const where = Object.keys(query).length !== 0 ? {
             OR: Object.keys(query).map(key => ({
                 [key]: {
@@ -104,5 +131,46 @@ class Controller<T> {
             throw error;
         }
     }
+    async exportAsPdf (reply: FastifyReply, options?: { take: number, skip: number, orderBy?: { [key in keyof T]?: "asc" | "desc"; }, omit?: { [key in keyof Omit<T, 'id' | 'createdAt' | 'updatedAt'>]?: boolean; }; }) {
+        const defaultOmit = {
+            id: true,
+            createdAt: true,
+            updatedAt: true
+        };
+        try {
+            const data: T[] = await this.collection.findMany({
+                omit: {
+                    ...defaultOmit,
+                    ...options?.omit
+                }
+            });
+            const document = new pdfTable();
+            document.fontSize(10).text(this.name, { align: 'center' });
+            document.moveDown();
+            let table = {};
+            if (data.length === 0) {
+                table = {
+                    headers: ['Empty Database'],
+                    rows: []
+                };
+            } else {
+                table = {
+                    headers: Object.keys(data[0]),
+                    rows: data.map(object => Object.values(object))
+                };
+            }
+            await document.table(table);
+            document.end();
+            return reply
+                .header("Content-Type", "application/pdf")
+                .header("Content-Disposition", `attachment; filename=${this.name}.pdf`)
+                .send(document);
+        } catch (error: any) {
+            if (!error.statusCode) error.statusCode = "500";
+            throw error;
+        }
+    }
 }
+
+
 export default Controller;
