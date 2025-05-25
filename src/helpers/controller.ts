@@ -199,10 +199,11 @@ class Controller<T extends object> {
                     ...options?.omit
                 }
             });
+            const document = JSON.stringify(data);
             return reply
                 .header("Content-Type", "application/json")
                 .header("Content-Disposition", `attachment; filename=${this.name}.json`)
-                .send(data);
+                .send(document);
         } catch (error: any) {
             if (!error.statusCode) error.statusCode = "500";
             throw error;

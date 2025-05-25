@@ -97,8 +97,7 @@ class Service<T extends object> {
                 case 'pdf':
                     return await this.controller.exportAsPdf(reply, options);
                 case 'json':
-                    throw new Error("Not implemented"); // TODO: Implement
-                // return await this.controller.exportAsJson(reply, options);
+                    return await this.controller.exportAsJson(reply, options);
                 case 'csv':
                     return await this.controller.exportAsCsv(reply, options);
                 case 'xlsx':
