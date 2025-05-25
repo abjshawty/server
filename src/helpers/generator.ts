@@ -1,16 +1,4 @@
-/*
-The goal is creating a generator that will generate the controllers, services, and routes based on the prisma schema.
-We will pass the model name as an argument to the generator.
-Steps:
-- Read the prisma schema
-- Generate the controllers
-- Generate the services
-- Generate the schemas
-- Generate the routes
-*/
-
 import { Prisma } from '@prisma/client';
-import { FastifyInstance } from 'fastify';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -45,13 +33,16 @@ export class PrismaGenerator {
         schemas: path.join(process.cwd(), 'src', 'schemas'),
         routes: path.join(process.cwd(), 'src', 'routes'),
     };
+    private formatName (name: string) {
+        return name.charAt(0).toLowerCase() + name.slice(1);
+    }
 
     async generate (modelName?: string) {
         await this.ensureDirectories();
         await this.parsePrismaSchema();
 
         const modelsToGenerate = modelName
-            ? this.models.filter(m => m.name.toLowerCase() === modelName.toLowerCase())
+            ? this.models.filter(m => m.name.toLowerCase() === this.formatName(modelName))
             : this.models;
 
         if (modelsToGenerate.length === 0) {
@@ -67,7 +58,11 @@ export class PrismaGenerator {
         }
 
         // Update routes index to include all models
-        await this.updateRoutesIndex();
+        if (modelName) {
+            await this.updateRoutesIndex(this.formatName(modelName));
+        } else {
+            await this.regenerateRoutesIndex();
+        }
 
         console.log('Generation completed successfully!');
     }
@@ -155,11 +150,27 @@ export default new Service(Controller);
         const varName = model.name.toLowerCase();
 
         const requiredFields = model.fields
-            .filter(f => !f.isOptional && !f.isId)
+            .filter(f => !f.isOptional && !f.isId && !f.name.startsWith('createdAt') && !f.name.startsWith('updatedAt'))
             .map(f => `'${f.name}'`)
             .join(', ');
 
         const properties = model.fields.reduce((acc, field) => {
+            const prop: Record<string, any> = {
+                type: this.mapPrismaTypeToSchemaType(field.type)
+            };
+
+            if (field.type === 'String') {
+                prop.format = 'string';
+            } else if (field.type === 'DateTime') {
+                prop.format = 'date-time';
+            }
+
+            return {
+                ...acc,
+                [field.name]: prop
+            };
+        }, {});
+        const createProperties = model.fields.filter(f => f.name != 'createdAt' && f.name != 'updatedAt' && !f.isId).reduce((acc, field) => {
             const prop: Record<string, any> = {
                 type: this.mapPrismaTypeToSchemaType(field.type)
             };
@@ -212,7 +223,7 @@ export const getOrDelete = {
 export const create = {
     body: {
         type: "object",
-        properties: ${JSON.stringify(properties, null, 4).replace(/"([^"]+)":/g, '$1:')},
+        properties: ${JSON.stringify(createProperties, null, 4).replace(/"([^"]+)":/g, '$1:')},
         required: [${requiredFields}],
     },
 };
@@ -248,11 +259,11 @@ export const update = {
         try {
             content = await fs.readFile(routesIndexPath, 'utf-8');
         } catch (error) {
-            return this.regenerateRoutesIndex();
+            return this.regenerateRoutesIndex(newModelName);
         }
 
-        const importRegex = new RegExp(`import ${newModelName} from \"./${newModelName}\"`);
-        const registerRegex = new RegExp(`server\s*\.register\s*\(\s*${newModelName}\s*,\s*\{\s*prefix\s*:\s*\\"\/${newModelName}s\\"\s*\}\)`);
+        const importRegex = new RegExp(`import\\s+${newModelName}\\s+from\\s+["']\\.\\/${newModelName}["']`, 'i');
+        const registerRegex = new RegExp(`server\\s*\\.register\\s*\\(\\s*${newModelName}\\s*,\\s*\\{\\s*prefix\\s*:\\s*["']\\/${newModelName}s["']\\s*\\}`, 'i');
 
         if (importRegex.test(content) && registerRegex.test(content)) {
             console.log(`Route for ${newModelName} already exists in routes/index.ts`);
@@ -280,13 +291,14 @@ export const update = {
         console.log(`Updated routes index with new route: ${newModelName}`);
     }
 
-    private async regenerateRoutesIndex () {
+    private async regenerateRoutesIndex (modelName?: string) {
         const routesIndexPath = path.join(this.outputDirs.routes, 'index.ts');
-        const modelNames = this.models.map(m => m.name.toLowerCase());
+        const modelNames = modelName ? this.models.filter(m => this.formatName(m.name) === this.formatName(modelName)) : this.models.map(m => this.formatName(m.name));
 
         let content = 'import { FastifyInstance } from "fastify";\n';
 
         for (const model of modelNames) {
+            console.log(model);
             content += `import ${model} from \"./${model}\";\n`;
         }
 
@@ -304,7 +316,7 @@ export const update = {
         const routesDir = this.outputDirs.routes;
         const routePath = path.join(routesDir, `${model.name.toLowerCase()}.ts`);
         const className = model.name;
-        const varName = model.name.toLowerCase();
+        const varName = this.formatName(model.name);
 
         try {
             await fs.access(routePath);

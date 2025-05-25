@@ -21,6 +21,7 @@
         "start": "node build/index.js",
         "test": "jest --watchAll",
         "gen": "npx prisma generate",
+        "format": "prettier --write ./src",
         "migrate": "npx prisma migrate dev --name dev",
         "reset": "npm i && npx prisma migrate reset --force && npx prisma migrate dev --name dev"
     },
