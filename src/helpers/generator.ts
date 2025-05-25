@@ -1,43 +1,145 @@
+/**
+ * @file Generator utility for creating CRUD controllers, services, schemas, and routes
+ * based on Prisma schema definitions. This module automates the generation of
+ * boilerplate code for API endpoints, reducing manual work and ensuring consistency.
+ */
+
 import { Prisma } from "@prisma/client";
 import { promises as fs } from "fs";
 import path from "path";
 
+/**
+ * Represents metadata about a field in a Prisma model
+ */
 interface FieldInfo {
+  /**
+   * The name of the field
+   */
   name: string;
+  /**
+   * The type of the field
+   */
   type: string;
+  /**
+   * Whether the field is optional
+   */
   isOptional: boolean;
+  /**
+   * Whether the field is an ID
+   */
   isId: boolean;
+  /**
+   * Whether the field is a relation
+   */
   isRelation: boolean;
+  /**
+   * The name of the relation (if applicable)
+   */
   relationName?: string;
+  /**
+   * The type of the relation (if applicable)
+   */
   relationTo?: string;
+  /**
+   * Whether the field is a list
+   */
   isList: boolean;
 }
 
+/**
+ * Represents metadata about a Prisma model and its relations
+ */
 interface ModelInfo {
+  /**
+   * The name of the model
+   */
   name: string;
+  /**
+   * The fields of the model
+   */
   fields: FieldInfo[];
+  /**
+   * The relations of the model
+   */
   relations: {
+    /**
+     * The name of the relation
+     */
     name: string;
+    /**
+     * The type of the relation
+     */
     type: string;
+    /**
+     * Whether the relation is a list
+     */
     isList: boolean;
+    /**
+     * The fields of the relation (if applicable)
+     */
     relationFromFields?: readonly string[];
+    /**
+     * The fields of the relation (if applicable)
+     */
     relationToFields?: readonly string[];
   }[];
 }
 
+/**
+ * Main generator class that handles the creation of CRUD components
+ * based on Prisma schema definitions.
+ *
+ * @example
+ * // Generate all components for all models
+ * const generator = new PrismaGenerator();
+ * await generator.generate();
+ *
+ * // Generate components for a specific model
+ * await generator.generate('User');
+ */
 class PrismaGenerator {
+  /**
+   * Collection of parsed Prisma models
+   */
   private models: ModelInfo[] = [];
+
+  /**
+   * Output directories for generated files
+   */
   private outputDirs = {
+    /**
+     * Directory for generated controllers
+     */
     controllers: path.join(process.cwd(), "src", "controllers"),
+    /**
+     * Directory for generated services
+     */
     services: path.join(process.cwd(), "src", "services"),
+    /**
+     * Directory for generated schemas
+     */
     schemas: path.join(process.cwd(), "src", "schemas"),
+    /**
+     * Directory for generated routes
+     */
     routes: path.join(process.cwd(), "src", "routes"),
   };
-  private formatName(name: string) {
+
+  /**
+   * Converts a model name to its camelCase representation
+   * @param name - The model name to format
+   * @returns The formatted name in camelCase
+   */
+  private formatName(name: string): string {
     return name.charAt(0).toLowerCase() + name.slice(1);
   }
 
-  async generate(modelName?: string) {
+  /**
+   * Main generation method that orchestrates the creation of all components
+   * @param modelName - Optional specific model to generate components for
+   * @throws {Error} If no models are found or specified model doesn't exist
+   */
+  async generate(modelName?: string): Promise<void> {
     await this.ensureDirectories();
     await this.parsePrismaSchema();
 
@@ -53,36 +155,34 @@ class PrismaGenerator {
       );
     }
 
-    // Generate files for each model
     for (const model of modelsToGenerate) {
       await this.generateController(model);
       await this.generateService(model);
       await this.generateSchema(model);
       await this.generateRouteFile(model);
 
-      // Update all index files
       await this.updateControllerIndex(model.name);
       await this.updateServiceIndex(model.name);
       await this.updateSchemaIndex(model.name);
     }
 
-    // Update routes index
-    if (modelName) {
-      await this.updateRoutesIndex(this.formatName(modelName));
-    } else {
-      await this.regenerateRoutesIndex();
-    }
-
+    await this.updateRoutesIndex(modelName);
     console.log("Generation completed successfully!");
   }
 
-  private async ensureDirectories() {
+  /**
+   * Ensures that the output directories exist
+   */
+  private async ensureDirectories(): Promise<void> {
     for (const dir of Object.values(this.outputDirs)) {
       await fs.mkdir(dir, { recursive: true });
     }
   }
 
-  private async parsePrismaSchema() {
+  /**
+   * Parses the Prisma schema and populates the models array
+   */
+  private async parsePrismaSchema(): Promise<void> {
     const dmmf = Prisma.dmmf;
 
     if (!dmmf) {
@@ -126,7 +226,11 @@ class PrismaGenerator {
     });
   }
 
-  private async generateController(model: ModelInfo) {
+  /**
+   * Generates a controller for the given model
+   * @param model - The model to generate a controller for
+   */
+  private async generateController(model: ModelInfo): Promise<void> {
     const controllerPath = path.join(
       this.outputDirs.controllers,
       `${model.name.toLowerCase()}.ts`,
@@ -144,7 +248,11 @@ export default new Controller('${varName}');
     console.log(`Generated controller: ${controllerPath}`);
   }
 
-  private async generateService(model: ModelInfo) {
+  /**
+   * Generates a service for the given model
+   * @param model - The model to generate a service for
+   */
+  private async generateService(model: ModelInfo): Promise<void> {
     const servicePath = path.join(
       this.outputDirs.services,
       `${model.name.toLowerCase()}.ts`,
@@ -162,14 +270,17 @@ export default new Service(Controller);
     console.log(`Generated service: ${servicePath}`);
   }
 
-  private async generateSchema(model: ModelInfo) {
+  /**
+   * Generates a schema for the given model
+   * @param model - The model to generate a schema for
+   */
+  private async generateSchema(model: ModelInfo): Promise<void> {
     const schemaPath = path.join(
       this.outputDirs.schemas,
       `${model.name.toLowerCase()}.ts`,
     );
     const varName = model.name.toLowerCase();
 
-    // Filter out relation fields, timestamps, and IDs for required fields
     const requiredFields = model.fields
       .filter(
         (f) =>
@@ -182,7 +293,6 @@ export default new Service(Controller);
       .map((f) => `'${f.name}'`)
       .join(", ");
 
-    // Base properties for create/update (no relations, no timestamps, no IDs)
     const baseProperties = model.fields
       .filter(
         (f) =>
@@ -208,9 +318,8 @@ export default new Service(Controller);
         };
       }, {});
 
-    // Search properties (no relations, but include timestamps)
     const searchProperties = model.fields
-      .filter((f) => !f.isRelation) // Exclude relation fields
+      .filter((f) => !f.isRelation)
       .reduce((acc, field) => {
         const prop: Record<string, any> = {
           type: this.mapPrismaTypeToSchemaType(field.type),
@@ -238,10 +347,7 @@ export default new Service(Controller);
 export const find = {
     querystring: {
         type: "object",
-        properties: {
-            id: { type: "string" },
-        },
-        required: ["id"],
+        properties: ${JSON.stringify(searchProperties, null, 8).replace(/"([^"]+)":/g, "$1:")},
     },
 };
 
@@ -282,11 +388,17 @@ export const update = {
     console.log(`Generated schema: ${schemaPath}`);
   }
 
+  /**
+   * Updates the index file for the given directory and model
+   * @param directory - The directory to update the index file for
+   * @param modelName - The model to update the index file for
+   * @param exportName - The name of the export to add to the index file
+   */
   private async updateIndexFile(
     directory: string,
     modelName: string,
     exportName: string,
-  ) {
+  ): Promise<void> {
     const indexPath = path.join(directory, "index.ts");
     const modelLower = modelName.toLowerCase();
 
@@ -299,7 +411,6 @@ export const update = {
 
       if (exists) {
         content = await fs.readFile(indexPath, "utf-8");
-        // Check if already exported
         const exportRegex = new RegExp(
           `export\\s*\\{\\s*${exportName}\\s*\\}\\s*from\\s*[\"']\\.\\/${modelLower}[\"']`,
           "i",
@@ -309,7 +420,6 @@ export const update = {
         }
       }
 
-      // Add export at the end of the file
       const exportStatement = `export { ${exportName} } from './${modelLower}'`;
       const newContent = content.trim() + "\n" + exportStatement + "\n";
 
@@ -322,7 +432,11 @@ export const update = {
     }
   }
 
-  private async updateControllerIndex(modelName: string) {
+  /**
+   * Updates the controller index file for the given model
+   * @param modelName - The model to update the controller index file for
+   */
+  private async updateControllerIndex(modelName: string): Promise<void> {
     await this.updateIndexFile(
       this.outputDirs.controllers,
       modelName,
@@ -330,7 +444,11 @@ export const update = {
     );
   }
 
-  private async updateServiceIndex(modelName: string) {
+  /**
+   * Updates the service index file for the given model
+   * @param modelName - The model to update the service index file for
+   */
+  private async updateServiceIndex(modelName: string): Promise<void> {
     await this.updateIndexFile(
       this.outputDirs.services,
       modelName,
@@ -338,7 +456,11 @@ export const update = {
     );
   }
 
-  private async updateSchemaIndex(modelName: string) {
+  /**
+   * Updates the schema index file for the given model
+   * @param modelName - The model to update the schema index file for
+   */
+  private async updateSchemaIndex(modelName: string): Promise<void> {
     const indexPath = path.join(this.outputDirs.schemas, "index.ts");
     const modelLower = modelName.toLowerCase();
     const exportName = modelName;
@@ -353,7 +475,6 @@ export const update = {
 
       if (exists) {
         content = await fs.readFile(indexPath, "utf-8");
-        // Check if already exported with the same name
         const exportRegex = new RegExp(
           `export\\s*\\*\\s*as\\s*${exportName}\\s*from\\s*['"]\\.\\/\\/${modelLower}['"]`,
           "i",
@@ -361,7 +482,6 @@ export const update = {
         if (exportRegex.test(content)) {
           return; // Already exported
         }
-        // Remove any existing export for this model to prevent duplicates
         content = content.replace(
           new RegExp(
             `export\\s*\\*\\s*as\\s*${exportName}\\s*from\\s*['"]\\.\\/\\w+['"];?\\s*`,
@@ -378,7 +498,6 @@ export const update = {
         );
       }
 
-      // Add export at the end of the file
       const newContent = content.trim() + "\n" + exportStatement + "\n";
       await fs.writeFile(indexPath, newContent, "utf-8");
       console.log(`Updated schemas index with ${exportName}`);
@@ -387,8 +506,12 @@ export const update = {
     }
   }
 
-  private async updateRoutesIndex(newModelName?: string) {
-    if (!newModelName) {
+  /**
+   * Updates the routes index file for the given model
+   * @param modelName - The model to update the routes index file for
+   */
+  private async updateRoutesIndex(modelName?: string): Promise<void> {
+    if (!modelName) {
       await this.regenerateRoutesIndex();
       return;
     }
@@ -399,22 +522,20 @@ export const update = {
     try {
       content = await fs.readFile(routesIndexPath, "utf-8");
     } catch (error) {
-      return this.regenerateRoutesIndex(newModelName);
+      return this.regenerateRoutesIndex(modelName);
     }
 
     const importRegex = new RegExp(
-      `import\\s+${newModelName}\\s+from\\s+["']\\.\\/${newModelName}["']`,
+      `import\\s+${modelName}\\s+from\\s+["']\\.\\/${modelName}["']`,
       "i",
     );
     const registerRegex = new RegExp(
-      `server\\s*\\.register\\s*\\(\\s*${newModelName}\\s*,\\s*\\{\\s*prefix\\s*:\\s*["']\\/${newModelName}s["']\\s*\\}`,
+      `server\\s*\\.register\\s*\\(\\s*${modelName}\\s*,\\s*\\{\\s*prefix\\s*:\\s*["']\\/${modelName}s["']\\s*\\}`,
       "i",
     );
 
     if (importRegex.test(content) && registerRegex.test(content)) {
-      console.log(
-        `Route for ${newModelName} already exists in routes/index.ts`,
-      );
+      console.log(`Route for ${modelName} already exists in routes/index.ts`);
       return;
     }
 
@@ -423,7 +544,7 @@ export const update = {
       if (lastImportMatch) {
         content = content.replace(
           lastImportMatch,
-          `${lastImportMatch}\nimport ${newModelName} from \"./${newModelName}\"`,
+          `${lastImportMatch}\nimport ${modelName} from \"./${modelName}\"`,
         );
       }
     }
@@ -431,15 +552,19 @@ export const update = {
     if (!registerRegex.test(content)) {
       content = content.replace(
         /export default function \(server: FastifyInstance\) \{/,
-        `export default function (server: FastifyInstance) {\n    server.register(${newModelName}, { prefix: \"/${newModelName}s\" });`,
+        `export default function (server: FastifyInstance) {\n    server.register(${modelName}, { prefix: \"/${modelName}s\" });`,
       );
     }
 
     await fs.writeFile(routesIndexPath, content, "utf-8");
-    console.log(`Updated routes index with new route: ${newModelName}`);
+    console.log(`Updated routes index with new route: ${modelName}`);
   }
 
-  private async regenerateRoutesIndex(modelName?: string) {
+  /**
+   * Regenerates the routes index file for all models
+   * @param modelName - Optional model name to regenerate the routes index file for
+   */
+  private async regenerateRoutesIndex(modelName?: string): Promise<void> {
     const routesIndexPath = path.join(this.outputDirs.routes, "index.ts");
     const modelNames = modelName
       ? this.models.filter(
@@ -464,7 +589,11 @@ export const update = {
     console.log(`Regenerated routes index: ${routesIndexPath}`);
   }
 
-  private async generateRouteFile(model: ModelInfo) {
+  /**
+   * Generates a route file for the given model
+   * @param model - The model to generate a route file for
+   */
+  private async generateRouteFile(model: ModelInfo): Promise<void> {
     const routesDir = this.outputDirs.routes;
     const routePath = path.join(routesDir, `${model.name.toLowerCase()}.ts`);
     const className = model.name;
@@ -486,7 +615,6 @@ import { ${className} as Schema } from "../schemas";
 import { auth } from "../utils";
 
 const routes: FastifyPluginCallback = (server) => {
-    // Create
     server.route({
         method: "POST",
         url: "/",
@@ -498,7 +626,6 @@ const routes: FastifyPluginCallback = (server) => {
         }
     });
 
-    // Get All
     server.route({
         method: "GET",
         url: "/",
@@ -510,12 +637,12 @@ const routes: FastifyPluginCallback = (server) => {
         }
     });
 
-        server.route({
+    server.route({
         method: "GET",
         url: "/export/:format",
         preHandler: auth,
-        handler: async (request: FastifyRequest<{ Params: { format: string; }; }>, reply: FastifyReply) => {
-            await Service.export(request.params.format, reply);
+        handler: async (request: FastifyRequest<{ Params: { format: string; }; Querystring: { [key in keyof Build]?: Build[key] }; }>, reply: FastifyReply) => {
+            await Service.export(request.params.format, reply, request.query);
         }
     });
 
@@ -524,7 +651,7 @@ const routes: FastifyPluginCallback = (server) => {
         url: "/search",
         schema: Schema.search,
         preHandler: auth,
-        handler: async (request: FastifyRequest<{ Querystring: { name: string; }; }>, reply: FastifyReply) => {
+        handler: async (request: FastifyRequest<{ Querystring: { [key in keyof Build]?: Build[key] }; }>, reply: FastifyReply) => {
             const result = await Service.search(request.query, { include: { ExampleAttach: true } });
             reply.send({ data: result });
         }
@@ -535,13 +662,12 @@ const routes: FastifyPluginCallback = (server) => {
         url: "/find",
         schema: Schema.find,
         preHandler: auth,
-        handler: async (request: FastifyRequest<{ Querystring: { name: string; }; }>, reply: FastifyReply) => {
+        handler: async (request: FastifyRequest<{ Querystring: { [key in keyof Build]?: Build[key] }; }>, reply: FastifyReply) => {
             const result = await Service.find(request.query);
             reply.send({ data: result });
         }
     });
 
-    // Get One
     server.route({
         method: "GET",
         url: "/:id",
@@ -556,7 +682,6 @@ const routes: FastifyPluginCallback = (server) => {
         }
     });
 
-    // Update
     server.route({
         method: "PUT",
         url: "/:id",
@@ -571,7 +696,6 @@ const routes: FastifyPluginCallback = (server) => {
         }
     });
 
-    // Delete
     server.route({
         method: "DELETE",
         url: "/:id",
@@ -596,6 +720,11 @@ export default routes;
     await this.updateRoutesIndex(varName);
   }
 
+  /**
+   * Maps a Prisma type to a schema type
+   * @param prismaType - The Prisma type to map
+   * @returns The corresponding schema type
+   */
   private mapPrismaTypeToSchemaType(prismaType: string): string {
     const typeMap: Record<string, string> = {
       String: "string",
@@ -613,9 +742,16 @@ export default routes;
   }
 }
 
-function generate(modelName?: string) {
+/**
+ * CLI entry point for the generator
+ * @param modelName - Optional model name to generate components for
+ */
+function generate(modelName?: string): void {
   const generator = new PrismaGenerator();
   generator.generate(modelName).catch(console.error);
 }
 
-generate(process.argv[2]);
+// Run generator if this file is executed directly
+if (require.main === module) {
+  generate(process.argv[2]);
+}

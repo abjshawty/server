@@ -1,11 +1,36 @@
+/**
+ * @file Service layer that acts as an intermediary between controllers and data access layer.
+ * Handles business logic, error handling, and data transformation.
+ */
+
 import { FastifyReply } from "fastify";
 import Controller from "./controller";
+
+/**
+ * Generic service class that provides CRUD operations and additional business logic
+ * for a given model type. Acts as a bridge between controllers and the data access layer.
+ *
+ * @template T - The type of the model this service operates on
+ */
 class Service<T extends object> {
+  /** The controller instance used for data access operations */
   controller: Controller<T>;
-  constructor(controller: Controller<T>) {
+
+  /**
+   * Creates a new Service instance
+   * @param controller - The controller instance to use for data access
+   */
+  constructor (controller: Controller<T>) {
     this.controller = controller;
   }
-  async create(data: T) {
+
+  /**
+   * Creates a new record in the database
+   * @param data - The data to create the record with
+   * @returns The created record
+   * @throws Will throw an error if creation fails
+   */
+  async create (data: T) {
     try {
       return await this.controller.create(data);
     } catch (error: any) {
@@ -13,7 +38,13 @@ class Service<T extends object> {
       throw error;
     }
   }
-  async getAll() {
+
+  /**
+   * Retrieves all records from the database
+   * @returns An array of all records
+   * @throws Will throw an error if retrieval fails
+   */
+  async getAll () {
     try {
       return await this.controller.getAll();
     } catch (error: any) {
@@ -21,7 +52,15 @@ class Service<T extends object> {
       throw error;
     }
   }
-  async getById(id: string) {
+
+  /**
+   * Retrieves a single record by its ID
+   * @param id - The ID of the record to retrieve
+   * @returns The found record
+   * @throws {Error} Will throw a 404 error if record is not found
+   * @throws Will throw a 500 error if retrieval fails
+   */
+  async getById (id: string) {
     try {
       const result = await this.controller.getById(id);
       if (!result) {
@@ -35,7 +74,14 @@ class Service<T extends object> {
       throw error;
     }
   }
-  async find(query: { [key in keyof T]?: T[key] }) {
+
+  /**
+   * Finds a single record that matches the query
+   * @param query - The query to match against
+   * @returns The first matching record or null if none found
+   * @throws Will throw an error if the query fails
+   */
+  async find (query: { [key in keyof T]?: T[key] }) {
     try {
       return await this.controller.find(query);
     } catch (error: any) {
@@ -43,7 +89,15 @@ class Service<T extends object> {
       throw error;
     }
   }
-  async update(id: string, data: Partial<T>) {
+
+  /**
+   * Updates a record by ID with the provided data
+   * @param id - The ID of the record to update
+   * @param data - The data to update
+   * @returns The updated record
+   * @throws Will throw an error if update fails
+   */
+  async update (id: string, data: Partial<T>) {
     try {
       return await this.controller.update(id, data);
     } catch (error: any) {
@@ -51,7 +105,14 @@ class Service<T extends object> {
       throw error;
     }
   }
-  async delete(id: string) {
+
+  /**
+   * Deletes a record by ID
+   * @param id - The ID of the record to delete
+   * @returns The deleted record
+   * @throws Will throw an error if deletion fails
+   */
+  async delete (id: string) {
     try {
       return await this.controller.delete(id);
     } catch (error: any) {
@@ -59,34 +120,49 @@ class Service<T extends object> {
       throw error;
     }
   }
-  async search(
+
+  /**
+   * Searches for records matching the query with pagination and sorting options
+   * @param query - The search criteria
+   * @param options - Pagination and sorting options
+   * @param options.page - The page number (1-based)
+   * @param options.take - Number of records per page
+   * @param options.orderBy - Sorting criteria
+   * @param options.include - Related models to include
+   * @param strict - If true, uses exact matching instead of partial matching
+   * @returns Paginated search results or exact matches based on strict mode
+   * @throws Will throw an error if search fails
+   */
+  async search (
     query: { [key in keyof T]?: T[key] },
     options?: {
       page?: number;
       take?: number;
       orderBy?: { [key in keyof T]?: "asc" | "desc" };
-      include?: { [key: string]: boolean };
+      include?: { [key: string]: boolean; };
     },
     strict: boolean = false,
-  ) {
+  ): Promise<T[] | { record: T[]; count: number; items: number; pages: number; currentPage: number; }> {
     try {
       let passingOptions: {
         take: number;
         skip: number;
         orderBy?: { [key in keyof T]?: "asc" | "desc" };
       };
-      if (!options)
+
+      if (!options) {
         passingOptions = {
           take: 10,
           skip: 0,
         };
-      else {
+      } else {
         passingOptions = {
           take: options.take || 10,
-          skip: (options.page || 1) - 1,
+          skip: ((options.page || 1) - 1) * (options.take || 10),
           orderBy: options.orderBy,
         };
       }
+
       return strict
         ? await this.controller.search(query, passingOptions)
         : await this.controller.paginatedSearch(query, passingOptions);
@@ -96,32 +172,44 @@ class Service<T extends object> {
     }
   }
 
-  async export(
+  /**
+   * Exports records in the specified format
+   * @param format - The export format (e.g., 'csv', 'json', 'xlsx', 'pdf')
+   * @param reply - Fastify reply object for streaming the response
+   * @param query - Optional query to filter records
+   * @param options - Export options
+   * @param options.take - Number of records to export
+   * @param options.skip - Number of records to skip
+   * @param options.orderBy - Sorting criteria
+   * @param options.omit - Fields to omit from the export
+   * @returns A promise that resolves when the export is complete
+   * @throws Will throw an error if export fails or format is unsupported
+   */
+  async export (
     format: string,
     reply: FastifyReply,
+    query?: { [key in keyof T]?: T[key] },
     options?: {
       take?: number;
       skip?: number;
       orderBy?: { [key in keyof T]?: "asc" | "desc" };
-      omit?: {
-        [key in keyof Omit<T, "id" | "createdAt" | "updatedAt">]?: boolean;
-      };
+      omit?: { [key in keyof T]?: boolean };
     },
-  ) {
+  ): Promise<void> {
     try {
       switch (format) {
         case "pdf":
-          return await this.controller.exportAsPdf(reply, options);
+          await this.controller.exportAsPdf(reply, query, options);
         case "json":
-          return await this.controller.exportAsJson(reply, options);
+          await this.controller.exportAsJson(reply, query, options);
         case "csv":
-          return await this.controller.exportAsCsv(reply, options);
+          await this.controller.exportAsCsv(reply, query, options);
         case "xlsx":
-          return await this.controller.exportAsXlsx(reply, options);
+          return await this.controller.exportAsXlsx(reply, query, options);
         default:
           const statusCode = 400;
           const error: any = new Error("Unspecified format.");
-          error.statusCode = statusCode;
+          error.statusCode = statusCode.toString();
           throw error;
       }
     } catch (error: any) {
@@ -130,4 +218,5 @@ class Service<T extends object> {
     }
   }
 }
+
 export default Service;
