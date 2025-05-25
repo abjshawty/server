@@ -4,13 +4,13 @@
 let initialized = false;
 
 export default async () => {
-    if (initialized) return;
-    initialized = true;
+  if (initialized) return;
+  initialized = true;
 
-    try {
-        // Add your initialization logic here
-    } catch (error: any) {
-        console.error("Failed to initialize default service:", error);
-        throw error;
-    }
+  try {
+    // Add your initialization logic here
+  } catch (error: any) {
+    console.error("Failed to initialize default service:", error);
+    throw error;
+  }
 };

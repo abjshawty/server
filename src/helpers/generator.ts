@@ -1,209 +1,237 @@
-import { Prisma } from '@prisma/client';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { Prisma } from "@prisma/client";
+import { promises as fs } from "fs";
+import path from "path";
 
 interface FieldInfo {
-    name: string;
-    type: string;
-    isOptional: boolean;
-    isId: boolean;
-    isRelation: boolean;
-    relationName?: string;
-    relationTo?: string;
-    isList: boolean;
+  name: string;
+  type: string;
+  isOptional: boolean;
+  isId: boolean;
+  isRelation: boolean;
+  relationName?: string;
+  relationTo?: string;
+  isList: boolean;
 }
 
 interface ModelInfo {
+  name: string;
+  fields: FieldInfo[];
+  relations: {
     name: string;
-    fields: FieldInfo[];
-    relations: {
-        name: string;
-        type: string;
-        isList: boolean;
-        relationFromFields?: readonly string[];
-        relationToFields?: readonly string[];
-    }[];
+    type: string;
+    isList: boolean;
+    relationFromFields?: readonly string[];
+    relationToFields?: readonly string[];
+  }[];
 }
 
 class PrismaGenerator {
-    private models: ModelInfo[] = [];
-    private outputDirs = {
-        controllers: path.join(process.cwd(), 'src', 'controllers'),
-        services: path.join(process.cwd(), 'src', 'services'),
-        schemas: path.join(process.cwd(), 'src', 'schemas'),
-        routes: path.join(process.cwd(), 'src', 'routes'),
-    };
-    private formatName (name: string) {
-        return name.charAt(0).toLowerCase() + name.slice(1);
+  private models: ModelInfo[] = [];
+  private outputDirs = {
+    controllers: path.join(process.cwd(), "src", "controllers"),
+    services: path.join(process.cwd(), "src", "services"),
+    schemas: path.join(process.cwd(), "src", "schemas"),
+    routes: path.join(process.cwd(), "src", "routes"),
+  };
+  private formatName(name: string) {
+    return name.charAt(0).toLowerCase() + name.slice(1);
+  }
+
+  async generate(modelName?: string) {
+    await this.ensureDirectories();
+    await this.parsePrismaSchema();
+
+    const modelsToGenerate = modelName
+      ? this.models.filter(
+          (m) => m.name.toLowerCase() === this.formatName(modelName),
+        )
+      : this.models;
+
+    if (modelsToGenerate.length === 0) {
+      throw new Error(
+        `No models found${modelName ? ` matching '${modelName}'` : ""}`,
+      );
     }
 
-    async generate (modelName?: string) {
-        await this.ensureDirectories();
-        await this.parsePrismaSchema();
+    // Generate files for each model
+    for (const model of modelsToGenerate) {
+      await this.generateController(model);
+      await this.generateService(model);
+      await this.generateSchema(model);
+      await this.generateRouteFile(model);
 
-        const modelsToGenerate = modelName
-            ? this.models.filter(m => m.name.toLowerCase() === this.formatName(modelName))
-            : this.models;
-
-        if (modelsToGenerate.length === 0) {
-            throw new Error(`No models found${modelName ? ` matching '${modelName}'` : ''}`);
-        }
-
-        // Generate files for each model
-        for (const model of modelsToGenerate) {
-            await this.generateController(model);
-            await this.generateService(model);
-            await this.generateSchema(model);
-            await this.generateRouteFile(model);
-
-            // Update all index files
-            await this.updateControllerIndex(model.name);
-            await this.updateServiceIndex(model.name);
-            await this.updateSchemaIndex(model.name);
-        }
-
-        // Update routes index
-        if (modelName) {
-            await this.updateRoutesIndex(this.formatName(modelName));
-        } else {
-            await this.regenerateRoutesIndex();
-        }
-
-        console.log('Generation completed successfully!');
+      // Update all index files
+      await this.updateControllerIndex(model.name);
+      await this.updateServiceIndex(model.name);
+      await this.updateSchemaIndex(model.name);
     }
 
-    private async ensureDirectories () {
-        for (const dir of Object.values(this.outputDirs)) {
-            await fs.mkdir(dir, { recursive: true });
-        }
+    // Update routes index
+    if (modelName) {
+      await this.updateRoutesIndex(this.formatName(modelName));
+    } else {
+      await this.regenerateRoutesIndex();
     }
 
-    private async parsePrismaSchema () {
-        const dmmf = Prisma.dmmf;
+    console.log("Generation completed successfully!");
+  }
 
-        if (!dmmf) {
-            throw new Error('Prisma DMMF not found. Make sure @prisma/client is installed.');
-        }
+  private async ensureDirectories() {
+    for (const dir of Object.values(this.outputDirs)) {
+      await fs.mkdir(dir, { recursive: true });
+    }
+  }
 
-        this.models = dmmf.datamodel.models.map(model => {
-            const fields: FieldInfo[] = model.fields.map(field => {
-                const relationName = field.relationName;
-                const relationTo = relationName ? field.type : undefined;
+  private async parsePrismaSchema() {
+    const dmmf = Prisma.dmmf;
 
-                return {
-                    name: field.name,
-                    type: field.type,
-                    isOptional: !field.isRequired,
-                    isId: field.isId || false,
-                    isRelation: !!relationName,
-                    relationName,
-                    relationTo,
-                    isList: field.isList || false,
-                };
-            });
-
-            const relations = model.fields
-                .filter(f => f.relationName)
-                .map(f => ({
-                    name: f.name,
-                    type: f.type,
-                    isList: f.isList || false,
-                    relationFromFields: f.relationFromFields,
-                    relationToFields: f.relationToFields,
-                }));
-
-            return {
-                name: model.name,
-                fields,
-                relations,
-            };
-        });
+    if (!dmmf) {
+      throw new Error(
+        "Prisma DMMF not found. Make sure @prisma/client is installed.",
+      );
     }
 
-    private async generateController (model: ModelInfo) {
-        const controllerPath = path.join(this.outputDirs.controllers, `${model.name.toLowerCase()}.ts`);
-        const className = model.name;
-        const varName = model.name.toLowerCase();
+    this.models = dmmf.datamodel.models.map((model) => {
+      const fields: FieldInfo[] = model.fields.map((field) => {
+        const relationName = field.relationName;
+        const relationTo = relationName ? field.type : undefined;
 
-        const content = `import { ${className} as Build } from "@prisma/client";
+        return {
+          name: field.name,
+          type: field.type,
+          isOptional: !field.isRequired,
+          isId: field.isId || false,
+          isRelation: !!relationName,
+          relationName,
+          relationTo,
+          isList: field.isList || false,
+        };
+      });
+
+      const relations = model.fields
+        .filter((f) => f.relationName)
+        .map((f) => ({
+          name: f.name,
+          type: f.type,
+          isList: f.isList || false,
+          relationFromFields: f.relationFromFields,
+          relationToFields: f.relationToFields,
+        }));
+
+      return {
+        name: model.name,
+        fields,
+        relations,
+      };
+    });
+  }
+
+  private async generateController(model: ModelInfo) {
+    const controllerPath = path.join(
+      this.outputDirs.controllers,
+      `${model.name.toLowerCase()}.ts`,
+    );
+    const className = model.name;
+    const varName = model.name.toLowerCase();
+
+    const content = `import { ${className} as Build } from "@prisma/client";
 import { ControllerFactory } from "../helpers";
 class Controller extends ControllerFactory<Build> { }
 export default new Controller('${varName}');
 `;
 
-        await fs.writeFile(controllerPath, content, 'utf-8');
-        console.log(`Generated controller: ${controllerPath}`);
-    }
+    await fs.writeFile(controllerPath, content, "utf-8");
+    console.log(`Generated controller: ${controllerPath}`);
+  }
 
-    private async generateService (model: ModelInfo) {
-        const servicePath = path.join(this.outputDirs.services, `${model.name.toLowerCase()}.ts`);
-        const className = model.name;
+  private async generateService(model: ModelInfo) {
+    const servicePath = path.join(
+      this.outputDirs.services,
+      `${model.name.toLowerCase()}.ts`,
+    );
+    const className = model.name;
 
-        const content = `import { ${className} as Build } from "@prisma/client";
+    const content = `import { ${className} as Build } from "@prisma/client";
 import { ${className} as Controller } from "../controllers";
 import { ServiceFactory } from "../helpers";
 class Service extends ServiceFactory<Build> { }
 export default new Service(Controller);
 `;
 
-        await fs.writeFile(servicePath, content, 'utf-8');
-        console.log(`Generated service: ${servicePath}`);
-    }
+    await fs.writeFile(servicePath, content, "utf-8");
+    console.log(`Generated service: ${servicePath}`);
+  }
 
-    private async generateSchema (model: ModelInfo) {
-        const schemaPath = path.join(this.outputDirs.schemas, `${model.name.toLowerCase()}.ts`);
-        const varName = model.name.toLowerCase();
+  private async generateSchema(model: ModelInfo) {
+    const schemaPath = path.join(
+      this.outputDirs.schemas,
+      `${model.name.toLowerCase()}.ts`,
+    );
+    const varName = model.name.toLowerCase();
 
-        // Filter out relation fields, timestamps, and IDs for required fields
-        const requiredFields = model.fields
-            .filter(f => !f.isOptional && !f.isId && !f.name.startsWith('createdAt') && !f.name.startsWith('updatedAt') && !f.isRelation)
-            .map(f => `'${f.name}'`)
-            .join(', ');
+    // Filter out relation fields, timestamps, and IDs for required fields
+    const requiredFields = model.fields
+      .filter(
+        (f) =>
+          !f.isOptional &&
+          !f.isId &&
+          !f.name.startsWith("createdAt") &&
+          !f.name.startsWith("updatedAt") &&
+          !f.isRelation,
+      )
+      .map((f) => `'${f.name}'`)
+      .join(", ");
 
-        // Base properties for create/update (no relations, no timestamps, no IDs)
-        const baseProperties = model.fields
-            .filter(f => !f.isId && !f.name.startsWith('createdAt') && !f.name.startsWith('updatedAt') && !f.isRelation)
-            .reduce((acc, field) => {
-                const prop: Record<string, any> = {
-                    type: this.mapPrismaTypeToSchemaType(field.type)
-                };
+    // Base properties for create/update (no relations, no timestamps, no IDs)
+    const baseProperties = model.fields
+      .filter(
+        (f) =>
+          !f.isId &&
+          !f.name.startsWith("createdAt") &&
+          !f.name.startsWith("updatedAt") &&
+          !f.isRelation,
+      )
+      .reduce((acc, field) => {
+        const prop: Record<string, any> = {
+          type: this.mapPrismaTypeToSchemaType(field.type),
+        };
 
-                if (field.type === 'String') {
-                    prop.format = 'string';
-                } else if (field.type === 'DateTime') {
-                    prop.format = 'date-time';
-                }
+        if (field.type === "String") {
+          prop.format = "string";
+        } else if (field.type === "DateTime") {
+          prop.format = "date-time";
+        }
 
-                return {
-                    ...acc,
-                    [field.name]: prop
-                };
-            }, {});
+        return {
+          ...acc,
+          [field.name]: prop,
+        };
+      }, {});
 
-        // Search properties (no relations, but include timestamps)
-        const searchProperties = model.fields
-            .filter(f => !f.isRelation) // Exclude relation fields
-            .reduce((acc, field) => {
-                const prop: Record<string, any> = {
-                    type: this.mapPrismaTypeToSchemaType(field.type)
-                };
+    // Search properties (no relations, but include timestamps)
+    const searchProperties = model.fields
+      .filter((f) => !f.isRelation) // Exclude relation fields
+      .reduce((acc, field) => {
+        const prop: Record<string, any> = {
+          type: this.mapPrismaTypeToSchemaType(field.type),
+        };
 
-                if (field.type === 'String') {
-                    prop.format = 'string';
-                } else if (field.type === 'DateTime') {
-                    prop.format = 'date-time';
-                }
+        if (field.type === "String") {
+          prop.format = "string";
+        } else if (field.type === "DateTime") {
+          prop.format = "date-time";
+        }
 
-                return {
-                    ...acc,
-                    [field.name]: prop
-                };
-            }, {});
+        return {
+          ...acc,
+          [field.name]: prop,
+        };
+      }, {});
 
-        const content = `export const search = {
+    const content = `export const search = {
     querystring: {
         type: "object",
-        properties: ${JSON.stringify(searchProperties, null, 8).replace(/"([^"]+)":/g, '$1:')},
+        properties: ${JSON.stringify(searchProperties, null, 8).replace(/"([^"]+)":/g, "$1:")},
     },
 };
 
@@ -230,7 +258,7 @@ export const getOrDelete = {
 export const create = {
     body: {
         type: "object",
-        properties: ${JSON.stringify(baseProperties, null, 8).replace(/"([^"]+)":/g, '$1:')},
+        properties: ${JSON.stringify(baseProperties, null, 8).replace(/"([^"]+)":/g, "$1:")},
         required: [${requiredFields}],
     },
 };
@@ -245,163 +273,213 @@ export const update = {
     },
     body: {
         type: "object",
-        properties: ${JSON.stringify(baseProperties, null, 8).replace(/"([^"]+)":/g, '$1:')}
+        properties: ${JSON.stringify(baseProperties, null, 8).replace(/"([^"]+)":/g, "$1:")}
     },
 };
 `;
 
-        await fs.writeFile(schemaPath, content, 'utf-8');
-        console.log(`Generated schema: ${schemaPath}`);
+    await fs.writeFile(schemaPath, content, "utf-8");
+    console.log(`Generated schema: ${schemaPath}`);
+  }
+
+  private async updateIndexFile(
+    directory: string,
+    modelName: string,
+    exportName: string,
+  ) {
+    const indexPath = path.join(directory, "index.ts");
+    const modelLower = modelName.toLowerCase();
+
+    try {
+      let content = "";
+      const exists = await fs
+        .access(indexPath)
+        .then(() => true)
+        .catch(() => false);
+
+      if (exists) {
+        content = await fs.readFile(indexPath, "utf-8");
+        // Check if already exported
+        const exportRegex = new RegExp(
+          `export\\s*\\{\\s*${exportName}\\s*\\}\\s*from\\s*[\"']\\.\\/${modelLower}[\"']`,
+          "i",
+        );
+        if (exportRegex.test(content)) {
+          return; // Already exported
+        }
+      }
+
+      // Add export at the end of the file
+      const exportStatement = `export { ${exportName} } from './${modelLower}'`;
+      const newContent = content.trim() + "\n" + exportStatement + "\n";
+
+      await fs.writeFile(indexPath, newContent, "utf-8");
+      console.log(
+        `Updated ${path.basename(directory)} index with ${exportName}`,
+      );
+    } catch (error) {
+      console.error(`Error updating ${path.basename(directory)} index:`, error);
+    }
+  }
+
+  private async updateControllerIndex(modelName: string) {
+    await this.updateIndexFile(
+      this.outputDirs.controllers,
+      modelName,
+      "default as " + modelName,
+    );
+  }
+
+  private async updateServiceIndex(modelName: string) {
+    await this.updateIndexFile(
+      this.outputDirs.services,
+      modelName,
+      "default as " + modelName,
+    );
+  }
+
+  private async updateSchemaIndex(modelName: string) {
+    const indexPath = path.join(this.outputDirs.schemas, "index.ts");
+    const modelLower = modelName.toLowerCase();
+    const exportName = modelName;
+    const exportStatement = `export * as ${exportName} from './${modelLower}'`;
+
+    try {
+      let content = "";
+      const exists = await fs
+        .access(indexPath)
+        .then(() => true)
+        .catch(() => false);
+
+      if (exists) {
+        content = await fs.readFile(indexPath, "utf-8");
+        // Check if already exported with the same name
+        const exportRegex = new RegExp(
+          `export\\s*\\*\\s*as\\s*${exportName}\\s*from\\s*['"]\\.\\/\\/${modelLower}['"]`,
+          "i",
+        );
+        if (exportRegex.test(content)) {
+          return; // Already exported
+        }
+        // Remove any existing export for this model to prevent duplicates
+        content = content.replace(
+          new RegExp(
+            `export\\s*\\*\\s*as\\s*${exportName}\\s*from\\s*['"]\\.\\/\\w+['"];?\\s*`,
+            "gi",
+          ),
+          "",
+        );
+        content = content.replace(
+          new RegExp(
+            `export\\s*\\{[^}]*\\b${exportName}\\b[^}]*\\}\\s*from\\s*['"]\\.\\/\\w+['"];?\\s*`,
+            "gi",
+          ),
+          "",
+        );
+      }
+
+      // Add export at the end of the file
+      const newContent = content.trim() + "\n" + exportStatement + "\n";
+      await fs.writeFile(indexPath, newContent, "utf-8");
+      console.log(`Updated schemas index with ${exportName}`);
+    } catch (error) {
+      console.error("Error updating schemas index:", error);
+    }
+  }
+
+  private async updateRoutesIndex(newModelName?: string) {
+    if (!newModelName) {
+      await this.regenerateRoutesIndex();
+      return;
     }
 
-    private async updateIndexFile (directory: string, modelName: string, exportName: string) {
-        const indexPath = path.join(directory, 'index.ts');
-        const modelLower = modelName.toLowerCase();
+    const routesIndexPath = path.join(this.outputDirs.routes, "index.ts");
 
-        try {
-            let content = '';
-            const exists = await fs.access(indexPath).then(() => true).catch(() => false);
-
-            if (exists) {
-                content = await fs.readFile(indexPath, 'utf-8');
-                // Check if already exported
-                const exportRegex = new RegExp(`export\\s*\\{\\s*${exportName}\\s*\\}\\s*from\\s*[\"']\\.\\/${modelLower}[\"']`, 'i');
-                if (exportRegex.test(content)) {
-                    return; // Already exported
-                }
-            }
-
-            // Add export at the end of the file
-            const exportStatement = `export { ${exportName} } from './${modelLower}'`;
-            const newContent = content.trim() + '\n' + exportStatement + '\n';
-
-            await fs.writeFile(indexPath, newContent, 'utf-8');
-            console.log(`Updated ${path.basename(directory)} index with ${exportName}`);
-        } catch (error) {
-            console.error(`Error updating ${path.basename(directory)} index:`, error);
-        }
+    let content = "";
+    try {
+      content = await fs.readFile(routesIndexPath, "utf-8");
+    } catch (error) {
+      return this.regenerateRoutesIndex(newModelName);
     }
 
-    private async updateControllerIndex (modelName: string) {
-        await this.updateIndexFile(this.outputDirs.controllers, modelName, 'default as ' + modelName);
+    const importRegex = new RegExp(
+      `import\\s+${newModelName}\\s+from\\s+["']\\.\\/${newModelName}["']`,
+      "i",
+    );
+    const registerRegex = new RegExp(
+      `server\\s*\\.register\\s*\\(\\s*${newModelName}\\s*,\\s*\\{\\s*prefix\\s*:\\s*["']\\/${newModelName}s["']\\s*\\}`,
+      "i",
+    );
+
+    if (importRegex.test(content) && registerRegex.test(content)) {
+      console.log(
+        `Route for ${newModelName} already exists in routes/index.ts`,
+      );
+      return;
     }
 
-    private async updateServiceIndex (modelName: string) {
-        await this.updateIndexFile(this.outputDirs.services, modelName, 'default as ' + modelName);
+    if (!importRegex.test(content)) {
+      const lastImportMatch = content.match(/^import .*$/gm)?.pop();
+      if (lastImportMatch) {
+        content = content.replace(
+          lastImportMatch,
+          `${lastImportMatch}\nimport ${newModelName} from \"./${newModelName}\"`,
+        );
+      }
     }
 
-    private async updateSchemaIndex (modelName: string) {
-        const indexPath = path.join(this.outputDirs.schemas, 'index.ts');
-        const modelLower = modelName.toLowerCase();
-        const exportName = modelName;
-        const exportStatement = `export * as ${exportName} from './${modelLower}'`;
-
-        try {
-            let content = '';
-            const exists = await fs.access(indexPath).then(() => true).catch(() => false);
-
-            if (exists) {
-                content = await fs.readFile(indexPath, 'utf-8');
-                // Check if already exported with the same name
-                const exportRegex = new RegExp(`export\\s*\\*\\s*as\\s*${exportName}\\s*from\\s*['"]\\.\\/\\/${modelLower}['"]`, 'i');
-                if (exportRegex.test(content)) {
-                    return; // Already exported
-                }
-                // Remove any existing export for this model to prevent duplicates
-                content = content.replace(new RegExp(`export\\s*\\*\\s*as\\s*${exportName}\\s*from\\s*['"]\\.\\/\\w+['"];?\\s*`, 'gi'), '');
-                content = content.replace(new RegExp(`export\\s*\\{[^}]*\\b${exportName}\\b[^}]*\\}\\s*from\\s*['"]\\.\\/\\w+['"];?\\s*`, 'gi'), '');
-            }
-
-            // Add export at the end of the file
-            const newContent = content.trim() + '\n' + exportStatement + '\n';
-            await fs.writeFile(indexPath, newContent, 'utf-8');
-            console.log(`Updated schemas index with ${exportName}`);
-        } catch (error) {
-            console.error('Error updating schemas index:', error);
-        }
+    if (!registerRegex.test(content)) {
+      content = content.replace(
+        /export default function \(server: FastifyInstance\) \{/,
+        `export default function (server: FastifyInstance) {\n    server.register(${newModelName}, { prefix: \"/${newModelName}s\" });`,
+      );
     }
 
-    private async updateRoutesIndex (newModelName?: string) {
-        if (!newModelName) {
-            await this.regenerateRoutesIndex();
-            return;
-        }
+    await fs.writeFile(routesIndexPath, content, "utf-8");
+    console.log(`Updated routes index with new route: ${newModelName}`);
+  }
 
-        const routesIndexPath = path.join(this.outputDirs.routes, 'index.ts');
+  private async regenerateRoutesIndex(modelName?: string) {
+    const routesIndexPath = path.join(this.outputDirs.routes, "index.ts");
+    const modelNames = modelName
+      ? this.models.filter(
+          (m) => this.formatName(m.name) === this.formatName(modelName),
+        )
+      : this.models.map((m) => this.formatName(m.name));
 
-        let content = '';
-        try {
-            content = await fs.readFile(routesIndexPath, 'utf-8');
-        } catch (error) {
-            return this.regenerateRoutesIndex(newModelName);
-        }
+    let content = 'import { FastifyInstance } from "fastify";\n';
 
-        const importRegex = new RegExp(`import\\s+${newModelName}\\s+from\\s+["']\\.\\/${newModelName}["']`, 'i');
-        const registerRegex = new RegExp(`server\\s*\\.register\\s*\\(\\s*${newModelName}\\s*,\\s*\\{\\s*prefix\\s*:\\s*["']\\/${newModelName}s["']\\s*\\}`, 'i');
-
-        if (importRegex.test(content) && registerRegex.test(content)) {
-            console.log(`Route for ${newModelName} already exists in routes/index.ts`);
-            return;
-        }
-
-        if (!importRegex.test(content)) {
-            const lastImportMatch = content.match(/^import .*$/gm)?.pop();
-            if (lastImportMatch) {
-                content = content.replace(
-                    lastImportMatch,
-                    `${lastImportMatch}\nimport ${newModelName} from \"./${newModelName}\"`
-                );
-            }
-        }
-
-        if (!registerRegex.test(content)) {
-            content = content.replace(
-                /export default function \(server: FastifyInstance\) \{/,
-                `export default function (server: FastifyInstance) {\n    server.register(${newModelName}, { prefix: \"/${newModelName}s\" });`
-            );
-        }
-
-        await fs.writeFile(routesIndexPath, content, 'utf-8');
-        console.log(`Updated routes index with new route: ${newModelName}`);
+    for (const model of modelNames) {
+      console.log(model);
+      content += `import ${model} from \"./${model}\";\n`;
     }
 
-    private async regenerateRoutesIndex (modelName?: string) {
-        const routesIndexPath = path.join(this.outputDirs.routes, 'index.ts');
-        const modelNames = modelName ? this.models.filter(m => this.formatName(m.name) === this.formatName(modelName)) : this.models.map(m => this.formatName(m.name));
+    content += "\nexport default function (server: FastifyInstance) {\n";
+    for (const model of modelNames) {
+      content += `    server.register(${model}, { prefix: \"/${model}s\" });\n`;
+    }
+    content += "}\n";
 
-        let content = 'import { FastifyInstance } from "fastify";\n';
+    await fs.writeFile(routesIndexPath, content, "utf-8");
+    console.log(`Regenerated routes index: ${routesIndexPath}`);
+  }
 
-        for (const model of modelNames) {
-            console.log(model);
-            content += `import ${model} from \"./${model}\";\n`;
-        }
+  private async generateRouteFile(model: ModelInfo) {
+    const routesDir = this.outputDirs.routes;
+    const routePath = path.join(routesDir, `${model.name.toLowerCase()}.ts`);
+    const className = model.name;
+    const varName = this.formatName(model.name);
 
-        content += '\nexport default function (server: FastifyInstance) {\n';
-        for (const model of modelNames) {
-            content += `    server.register(${model}, { prefix: \"/${model}s\" });\n`;
-        }
-        content += '}\n';
-
-        await fs.writeFile(routesIndexPath, content, 'utf-8');
-        console.log(`Regenerated routes index: ${routesIndexPath}`);
+    try {
+      await fs.access(routePath);
+      console.log(`Route file ${routePath} already exists, skipping...`);
+      await this.updateRoutesIndex(varName);
+      return;
+    } catch (error) {
+      // File doesn't exist, proceed with generation
     }
 
-    private async generateRouteFile (model: ModelInfo) {
-        const routesDir = this.outputDirs.routes;
-        const routePath = path.join(routesDir, `${model.name.toLowerCase()}.ts`);
-        const className = model.name;
-        const varName = this.formatName(model.name);
-
-        try {
-            await fs.access(routePath);
-            console.log(`Route file ${routePath} already exists, skipping...`);
-            await this.updateRoutesIndex(varName);
-            return;
-        } catch (error) {
-            // File doesn't exist, proceed with generation
-        }
-
-        const content = `import { FastifyPluginCallback, FastifyRequest, FastifyReply } from "fastify";
+    const content = `import { FastifyPluginCallback, FastifyRequest, FastifyReply } from "fastify";
 import { ${className} as Build } from "@prisma/client";
 import { ${className} as Service } from "../services";
 import { ${className} as Schema } from "../schemas";
@@ -512,32 +590,32 @@ const routes: FastifyPluginCallback = (server) => {
 export default routes;
 `;
 
-        await fs.writeFile(routePath, content, 'utf-8');
-        console.log(`Generated route: ${routePath}`);
+    await fs.writeFile(routePath, content, "utf-8");
+    console.log(`Generated route: ${routePath}`);
 
-        await this.updateRoutesIndex(varName);
-    }
+    await this.updateRoutesIndex(varName);
+  }
 
-    private mapPrismaTypeToSchemaType (prismaType: string): string {
-        const typeMap: Record<string, string> = {
-            'String': 'string',
-            'Int': 'number',
-            'Float': 'number',
-            'Boolean': 'boolean',
-            'DateTime': 'string',
-            'Json': 'object',
-            'BigInt': 'number',
-            'Decimal': 'number',
-            'Bytes': 'string',
-        };
+  private mapPrismaTypeToSchemaType(prismaType: string): string {
+    const typeMap: Record<string, string> = {
+      String: "string",
+      Int: "number",
+      Float: "number",
+      Boolean: "boolean",
+      DateTime: "string",
+      Json: "object",
+      BigInt: "number",
+      Decimal: "number",
+      Bytes: "string",
+    };
 
-        return typeMap[prismaType] || 'string';
-    }
+    return typeMap[prismaType] || "string";
+  }
 }
 
-function generate (modelName?: string) {
-    const generator = new PrismaGenerator();
-    generator.generate(modelName).catch(console.error);
+function generate(modelName?: string) {
+  const generator = new PrismaGenerator();
+  generator.generate(modelName).catch(console.error);
 }
 
 generate(process.argv[2]);

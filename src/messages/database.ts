@@ -14,10 +14,8 @@ export default {
   success: () => log(`${lang.Database.success}`),
   connection_error: (err: Error) =>
     log(`${lang.Database.connection_error}${err.message}`),
-  init_error: (err: Error) =>
-    log(`${lang.Database.init_error}${err.message}`),
+  init_error: (err: Error) => log(`${lang.Database.init_error}${err.message}`),
   seed_done: () => log(`${lang.Database.seed_done}`),
-  seed_error: (err: Error) =>
-    log(`${lang.Database.seed_error} ${err.message}`),
+  seed_error: (err: Error) => log(`${lang.Database.seed_error} ${err.message}`),
   die: () => log(`${lang.Database.die}`),
 };
