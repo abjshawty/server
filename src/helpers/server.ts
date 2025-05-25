@@ -4,6 +4,7 @@ import { die as killDatabase } from "../db";
 import multipart from "@fastify/multipart";
 import helmet from "@fastify/helmet";
 import cors from "@fastify/cors";
+import { init } from "../utils";
 import jwt from "@fastify/jwt";
 import routes from "../routes";
 import death from "death";
@@ -15,7 +16,7 @@ class Server {
     private role: env.role;
     private port: number;
     private server: FastifyInstance;
-    constructor() {
+    constructor () {
         this.server = Fastify({
             logger: {
                 transport: {
@@ -52,7 +53,7 @@ class Server {
         if (this.role === "producer" || this.role === "both") this.kafka.produce();
         if (this.role === "consumer" || this.role === "both") this.kafka.consume();
     }
-    private async bye(): Promise<void> {
+    private async bye (): Promise<void> {
         killDatabase();
         if (this.kafka) this.kafka.close();
         this.server.close().then(() => {
@@ -63,7 +64,7 @@ class Server {
             env.murder();
         });
     }
-    private config(): void {
+    private config (): void {
         if (env.jwtSecret === undefined) throw new Error("JWT secret not set");
         this.server.register(jwt, { secret: env.jwtSecret });
         this.server.register(multipart);
@@ -71,7 +72,7 @@ class Server {
         this.cors();
         this.die();
     }
-    private cors(): void {
+    private cors (): void {
         this.server.register(cors, {
             origin: env.corsOrigin,
             methods: ["GET", "POST", "PUT", "DELETE"],
@@ -80,18 +81,18 @@ class Server {
             credentials: true,
         });
     }
-    private die(): void {
+    private die (): void {
         death(() => this.bye());
     }
-    private errorHandler(): void {
+    private errorHandler (): void {
         this.server.setErrorHandler((error: FastifyError, request: FastifyRequest, response: FastifyReply) => {
             response.status(error.statusCode ? error.statusCode : 500).send(error);
         });
     }
-    private helmet(): void {
+    private helmet (): void {
         this.server.register(helmet);
     }
-    private routes() {
+    private routes () {
         const options = {
             schema: {
                 response: {
@@ -116,9 +117,10 @@ class Server {
         });
         this.server.register(routes, { prefix: `/${env.apiVersion}` });
     }
-    public async start(): Promise<void> {
+    public async start (): Promise<void> {
         try {
-            await this.server.listen({ port: this.port, host: this.host }, () => {
+            await init();
+            this.server.listen({ port: this.port, host: this.host }, () => {
                 messages.start();
             });
         } catch (error: any) {

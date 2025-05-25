@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { Auth } from "../messages";
 import { authEnabled } from "../helpers/env";
+import { Auth } from "../messages";
+import "@fastify/jwt";
 export default async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         if (!authEnabled) return;

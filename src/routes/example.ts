@@ -2,7 +2,7 @@ import { FastifyPluginCallback, FastifyReply, FastifyRequest } from "fastify";
 import { Example as Build } from "@prisma/client";
 import { Example as Service } from "../services";
 import { Example as Schema } from "../schemas";
-import { auth } from "../helpers";
+import { auth } from "../utils";
 const routes: FastifyPluginCallback = (server) => {
     server.route({
         method: "POST",
