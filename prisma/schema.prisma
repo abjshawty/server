@@ -24,3 +24,12 @@ model ExampleAttach {
 
     example Example @relation(fields: [exampleId], references: [id])
 }
+
+model Song {
+    id        String   @id @default(uuid())
+    title     String
+    artist    String
+    album     String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @default(now()) @updatedAt
+}
