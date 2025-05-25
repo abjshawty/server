@@ -25,7 +25,7 @@ interface ModelInfo {
     }[];
 }
 
-export class PrismaGenerator {
+class PrismaGenerator {
     private models: ModelInfo[] = [];
     private outputDirs = {
         controllers: path.join(process.cwd(), 'src', 'controllers'),
@@ -55,9 +55,14 @@ export class PrismaGenerator {
             await this.generateService(model);
             await this.generateSchema(model);
             await this.generateRouteFile(model);
+
+            // Update all index files
+            await this.updateControllerIndex(model.name);
+            await this.updateServiceIndex(model.name);
+            await this.updateSchemaIndex(model.name);
         }
 
-        // Update routes index to include all models
+        // Update routes index
         if (modelName) {
             await this.updateRoutesIndex(this.formatName(modelName));
         } else {
@@ -149,54 +154,56 @@ export default new Service(Controller);
         const schemaPath = path.join(this.outputDirs.schemas, `${model.name.toLowerCase()}.ts`);
         const varName = model.name.toLowerCase();
 
+        // Filter out relation fields, timestamps, and IDs for required fields
         const requiredFields = model.fields
-            .filter(f => !f.isOptional && !f.isId && !f.name.startsWith('createdAt') && !f.name.startsWith('updatedAt'))
+            .filter(f => !f.isOptional && !f.isId && !f.name.startsWith('createdAt') && !f.name.startsWith('updatedAt') && !f.isRelation)
             .map(f => `'${f.name}'`)
             .join(', ');
 
-        const properties = model.fields.reduce((acc, field) => {
-            const prop: Record<string, any> = {
-                type: this.mapPrismaTypeToSchemaType(field.type)
-            };
+        // Base properties for create/update (no relations, no timestamps, no IDs)
+        const baseProperties = model.fields
+            .filter(f => !f.isId && !f.name.startsWith('createdAt') && !f.name.startsWith('updatedAt') && !f.isRelation)
+            .reduce((acc, field) => {
+                const prop: Record<string, any> = {
+                    type: this.mapPrismaTypeToSchemaType(field.type)
+                };
 
-            if (field.type === 'String') {
-                prop.format = 'string';
-            } else if (field.type === 'DateTime') {
-                prop.format = 'date-time';
-            }
+                if (field.type === 'String') {
+                    prop.format = 'string';
+                } else if (field.type === 'DateTime') {
+                    prop.format = 'date-time';
+                }
 
-            return {
-                ...acc,
-                [field.name]: prop
-            };
-        }, {});
-        const createProperties = model.fields.filter(f => f.name != 'createdAt' && f.name != 'updatedAt' && !f.isId).reduce((acc, field) => {
-            const prop: Record<string, any> = {
-                type: this.mapPrismaTypeToSchemaType(field.type)
-            };
+                return {
+                    ...acc,
+                    [field.name]: prop
+                };
+            }, {});
 
-            if (field.type === 'String') {
-                prop.format = 'string';
-            } else if (field.type === 'DateTime') {
-                prop.format = 'date-time';
-            }
+        // Search properties (no relations, but include timestamps)
+        const searchProperties = model.fields
+            .filter(f => !f.isRelation) // Exclude relation fields
+            .reduce((acc, field) => {
+                const prop: Record<string, any> = {
+                    type: this.mapPrismaTypeToSchemaType(field.type)
+                };
 
-            return {
-                ...acc,
-                [field.name]: prop
-            };
-        }, {});
+                if (field.type === 'String') {
+                    prop.format = 'string';
+                } else if (field.type === 'DateTime') {
+                    prop.format = 'date-time';
+                }
+
+                return {
+                    ...acc,
+                    [field.name]: prop
+                };
+            }, {});
 
         const content = `export const search = {
     querystring: {
         type: "object",
-        properties: {
-            // Add searchable fields here
-            ${model.fields
-                .filter(f => !f.isOptional && !f.isId)
-                .map(f => `${f.name}: { type: "string" }`)
-                .join(',\n            ')}
-        }
+        properties: ${JSON.stringify(searchProperties, null, 8).replace(/"([^"]+)":/g, '$1:')},
     },
 };
 
@@ -204,9 +211,9 @@ export const find = {
     querystring: {
         type: "object",
         properties: {
-            // Add searchable fields here
             id: { type: "string" },
-        }
+        },
+        required: ["id"],
     },
 };
 
@@ -223,7 +230,7 @@ export const getOrDelete = {
 export const create = {
     body: {
         type: "object",
-        properties: ${JSON.stringify(createProperties, null, 4).replace(/"([^"]+)":/g, '$1:')},
+        properties: ${JSON.stringify(baseProperties, null, 8).replace(/"([^"]+)":/g, '$1:')},
         required: [${requiredFields}],
     },
 };
@@ -238,13 +245,80 @@ export const update = {
     },
     body: {
         type: "object",
-        properties: ${JSON.stringify(properties, null, 4).replace(/"([^"]+)":/g, '$1:')},
+        properties: ${JSON.stringify(baseProperties, null, 8).replace(/"([^"]+)":/g, '$1:')}
     },
 };
 `;
 
         await fs.writeFile(schemaPath, content, 'utf-8');
         console.log(`Generated schema: ${schemaPath}`);
+    }
+
+    private async updateIndexFile (directory: string, modelName: string, exportName: string) {
+        const indexPath = path.join(directory, 'index.ts');
+        const modelLower = modelName.toLowerCase();
+
+        try {
+            let content = '';
+            const exists = await fs.access(indexPath).then(() => true).catch(() => false);
+
+            if (exists) {
+                content = await fs.readFile(indexPath, 'utf-8');
+                // Check if already exported
+                const exportRegex = new RegExp(`export\\s*\\{\\s*${exportName}\\s*\\}\\s*from\\s*[\"']\\.\\/${modelLower}[\"']`, 'i');
+                if (exportRegex.test(content)) {
+                    return; // Already exported
+                }
+            }
+
+            // Add export at the end of the file
+            const exportStatement = `export { ${exportName} } from './${modelLower}'`;
+            const newContent = content.trim() + '\n' + exportStatement + '\n';
+
+            await fs.writeFile(indexPath, newContent, 'utf-8');
+            console.log(`Updated ${path.basename(directory)} index with ${exportName}`);
+        } catch (error) {
+            console.error(`Error updating ${path.basename(directory)} index:`, error);
+        }
+    }
+
+    private async updateControllerIndex (modelName: string) {
+        await this.updateIndexFile(this.outputDirs.controllers, modelName, 'default as ' + modelName);
+    }
+
+    private async updateServiceIndex (modelName: string) {
+        await this.updateIndexFile(this.outputDirs.services, modelName, 'default as ' + modelName);
+    }
+
+    private async updateSchemaIndex (modelName: string) {
+        const indexPath = path.join(this.outputDirs.schemas, 'index.ts');
+        const modelLower = modelName.toLowerCase();
+        const exportName = modelName;
+        const exportStatement = `export * as ${exportName} from './${modelLower}'`;
+
+        try {
+            let content = '';
+            const exists = await fs.access(indexPath).then(() => true).catch(() => false);
+
+            if (exists) {
+                content = await fs.readFile(indexPath, 'utf-8');
+                // Check if already exported with the same name
+                const exportRegex = new RegExp(`export\\s*\\*\\s*as\\s*${exportName}\\s*from\\s*['"]\\.\\/\\/${modelLower}['"]`, 'i');
+                if (exportRegex.test(content)) {
+                    return; // Already exported
+                }
+                // Remove any existing export for this model to prevent duplicates
+                content = content.replace(new RegExp(`export\\s*\\*\\s*as\\s*${exportName}\\s*from\\s*['"]\\.\\/\\w+['"];?\\s*`, 'gi'), '');
+                content = content.replace(new RegExp(`export\\s*\\{[^}]*\\b${exportName}\\b[^}]*\\}\\s*from\\s*['"]\\.\\/\\w+['"];?\\s*`, 'gi'), '');
+            }
+
+            // Add export at the end of the file
+            const newContent = content.trim() + '\n' + exportStatement + '\n';
+            await fs.writeFile(indexPath, newContent, 'utf-8');
+            console.log(`Updated schemas index with ${exportName}`);
+        } catch (error) {
+            console.error('Error updating schemas index:', error);
+        }
     }
 
     private async updateRoutesIndex (newModelName?: string) {
@@ -358,6 +432,37 @@ const routes: FastifyPluginCallback = (server) => {
         }
     });
 
+        server.route({
+        method: "GET",
+        url: "/export/:format",
+        preHandler: auth,
+        handler: async (request: FastifyRequest<{ Params: { format: string; }; }>, reply: FastifyReply) => {
+            await Service.export(request.params.format, reply);
+        }
+    });
+
+    server.route({
+        method: "GET",
+        url: "/search",
+        schema: Schema.search,
+        preHandler: auth,
+        handler: async (request: FastifyRequest<{ Querystring: { name: string; }; }>, reply: FastifyReply) => {
+            const result = await Service.search(request.query, { include: { ExampleAttach: true } });
+            reply.send({ data: result });
+        }
+    });
+
+    server.route({
+        method: "GET",
+        url: "/find",
+        schema: Schema.find,
+        preHandler: auth,
+        handler: async (request: FastifyRequest<{ Querystring: { name: string; }; }>, reply: FastifyReply) => {
+            const result = await Service.find(request.query);
+            reply.send({ data: result });
+        }
+    });
+
     // Get One
     server.route({
         method: "GET",
@@ -430,6 +535,9 @@ export default routes;
     }
 }
 
-// Example usage:
-// const generator = new PrismaGenerator();
-// generator.generate('Example').catch(console.error);
+function generate (modelName?: string) {
+    const generator = new PrismaGenerator();
+    generator.generate(modelName).catch(console.error);
+}
+
+generate(process.argv[2]);
