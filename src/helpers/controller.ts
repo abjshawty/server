@@ -61,7 +61,7 @@ class Controller<T extends object> {
             orderBy?: { [key in keyof T]?: "asc" | "desc"; },
             include?: { [key: string]: boolean; };
         }
-    ): Promise<T[]> { // TODO: Implement type recognition for include
+    ): Promise<T[]> {
         try {
             return await this.collection.findMany({
                 where: {
@@ -82,7 +82,7 @@ class Controller<T extends object> {
             orderBy?: { [key in keyof T]?: "asc" | "desc"; },
             include?: { [key: string]: boolean; };
         }
-    ): Promise<{ // TODO: Implement type recognition for include
+    ): Promise<{
         record: Promise<T>,
         count: Promise<Number>,
         items: Promise<Number>,
