@@ -1,7 +1,9 @@
 // Require is used here because of typescript errors
 const pdfTable = require("pdfkit-table");
+import { Parser } from "json2csv";
 import { FastifyReply } from "fastify";
 import { client } from "../db";
+import ExcelJS from "exceljs";
 class Controller<T extends object> {
     private collection: any;
     private name: string;
@@ -118,7 +120,34 @@ class Controller<T extends object> {
             throw error;
         }
     }
-    async exportAsPdf (reply: FastifyReply, options?: { take: number, skip: number, orderBy?: { [key in keyof T]?: "asc" | "desc"; }, omit?: { [key in keyof Omit<T, 'id' | 'createdAt' | 'updatedAt'>]?: boolean; }; }) {
+    async exportAsCsv (reply: FastifyReply, options?: { take?: number, skip?: number, orderBy?: { [key in keyof T]?: "asc" | "desc"; }, omit?: { [key in keyof Omit<T, 'id' | 'createdAt' | 'updatedAt'>]?: boolean; }; }) {
+        const defaultOmit = {
+            id: true,
+            createdAt: true,
+            updatedAt: true
+        };
+        try {
+            const data: T[] = await this.collection.findMany({
+                omit: {
+                    ...defaultOmit,
+                    ...options?.omit
+                }
+            });
+            const parser = new Parser({
+                fields: Object.keys(data[0]),
+                excelStrings: true
+            });
+            const document = parser.parse(data);
+            return reply
+                .header("Content-Type", "text/csv")
+                .header("Content-Disposition", `attachment; filename=${this.name}.csv`)
+                .send(document);
+        } catch (error: any) {
+            if (!error.statusCode) error.statusCode = "500";
+            throw error;
+        }
+    }
+    async exportAsPdf (reply: FastifyReply, options?: { take?: number, skip?: number, orderBy?: { [key in keyof T]?: "asc" | "desc"; }, omit?: { [key in keyof Omit<T, 'id' | 'createdAt' | 'updatedAt'>]?: boolean; }; }) {
         const defaultOmit = {
             id: true,
             createdAt: true,
@@ -152,6 +181,61 @@ class Controller<T extends object> {
                 .header("Content-Type", "application/pdf")
                 .header("Content-Disposition", `attachment; filename=${this.name}.pdf`)
                 .send(document);
+        } catch (error: any) {
+            if (!error.statusCode) error.statusCode = "500";
+            throw error;
+        }
+    }
+    async exportAsJson (reply: FastifyReply, options?: { take?: number, skip?: number, orderBy?: { [key in keyof T]?: "asc" | "desc"; }, omit?: { [key in keyof Omit<T, 'id' | 'createdAt' | 'updatedAt'>]?: boolean; }; }) {
+        const defaultOmit = {
+            id: true,
+            createdAt: true,
+            updatedAt: true
+        };
+        try {
+            const data: T[] = await this.collection.findMany({
+                omit: {
+                    ...defaultOmit,
+                    ...options?.omit
+                }
+            });
+            return reply
+                .header("Content-Type", "application/json")
+                .header("Content-Disposition", `attachment; filename=${this.name}.json`)
+                .send(data);
+        } catch (error: any) {
+            if (!error.statusCode) error.statusCode = "500";
+            throw error;
+        }
+    }
+    async exportAsXlsx (reply: FastifyReply, options?: { take?: number, skip?: number, orderBy?: { [key in keyof T]?: "asc" | "desc"; }, omit?: { [key in keyof Omit<T, 'id' | 'createdAt' | 'updatedAt'>]?: boolean; }; }) {
+        const defaultOmit = {
+            id: true,
+            createdAt: true,
+            updatedAt: true
+        };
+        try {
+            const data: T[] = await this.collection.findMany({
+                omit: {
+                    ...defaultOmit,
+                    ...options?.omit
+                }
+            });
+
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet(this.name);
+            worksheet.columns = Object.keys(data[0]).map(key => ({
+                header: key.toLocaleUpperCase(),
+                key
+            }));
+            data.forEach(row => {
+                worksheet.addRow(row);
+            });
+            const buffer = await workbook.xlsx.writeBuffer();
+            return reply
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .header("Content-Disposition", `attachment; filename=${this.name}.xlsx`)
+                .send(buffer);
         } catch (error: any) {
             if (!error.statusCode) error.statusCode = "500";
             throw error;

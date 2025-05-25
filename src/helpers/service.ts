@@ -91,20 +91,18 @@ class Service<T extends object> {
         }
     }
 
-    async export (format: string, reply: FastifyReply) {
+    async export (format: string, reply: FastifyReply, options?: { take?: number, skip?: number, orderBy?: { [key in keyof T]?: "asc" | "desc"; }, omit?: { [key in keyof Omit<T, 'id' | 'createdAt' | 'updatedAt'>]?: boolean; }; }) {
         try {
             switch (format) {
                 case 'pdf':
-                    return await this.controller.exportAsPdf(reply);
+                    return await this.controller.exportAsPdf(reply, options);
                 case 'json':
                     throw new Error("Not implemented"); // TODO: Implement
-                // return await this.controller.exportAsJson(reply);
+                // return await this.controller.exportAsJson(reply, options);
                 case 'csv':
-                    throw new Error("Not implemented"); // TODO: Implement
-                // return await this.controller.exportAsCsv(reply);
+                    return await this.controller.exportAsCsv(reply, options);
                 case 'xlsx':
-                    throw new Error("Not implemented"); // TODO: Implement
-                // return await this.controller.exportAsXlsx(reply);
+                    return await this.controller.exportAsXlsx(reply, options);
                 default:
                     const statusCode = 400;
                     const error: any = new Error("Unspecified format.");
