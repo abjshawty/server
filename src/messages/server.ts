@@ -2,6 +2,7 @@ import { log } from "console";
 import { language, port } from "../helpers/env";
 import * as locales from "../locales";
 let lang: {
+  Auth?: any;
   Database?: any;
   Kafka?: any;
   Server: any;

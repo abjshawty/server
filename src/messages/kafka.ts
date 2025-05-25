@@ -1,12 +1,13 @@
 import { log } from "console";
-import { env } from "../helpers";
+import { language } from "../helpers/env";
 import * as locales from "../locales";
 let lang: {
+    Auth?: any;
     Database?: any;
     Kafka: any;
     Server?: any;
 };
-if (env.language == "en-US") {
+if (language == "en-US") {
     lang = locales.en;
 } else {
     lang = locales.fr;

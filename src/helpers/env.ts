@@ -5,6 +5,7 @@ export type role = "producer" | "consumer" | "both" | "none";
 
 process.env.node_env !== "production" ? config() : "";
 export const apiVersion: string = `v${version.split(".")[0]}` || "v1";
+export const authEnabled: boolean = process.env.AUTH_ENABLED === "1" || false;
 export const corsOrigin: string = process.env.CORS_ORIGIN || `http://${process.env.APP_HOST || "localhost"}:${process.env.APP_PORT || 3000}`;
 export const database_url: string =
     `${process.env.DATABASE_URL}` ||

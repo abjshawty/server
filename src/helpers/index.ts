@@ -1,3 +1,4 @@
+export { default as auth } from "./auth";
 export * as env from "./env";
 export { default as ServiceFactory } from "./service";
 export { default as ControllerFactory } from "./controller";
