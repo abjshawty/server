@@ -1,8 +1,6 @@
 import { FastifyReply } from "fastify";
 import Controller from "./controller";
 class Service<T extends object> {
-    // TODO: Implement default validators
-    // TODO: Implement custom validators
     controller: Controller<T>;
     constructor (controller: Controller<T>) {
         this.controller = controller;
@@ -37,6 +35,14 @@ class Service<T extends object> {
             throw error;
         }
     }
+    async find (query: { [key in keyof T]?: T[key]; }) {
+        try {
+            return await this.controller.find(query);
+        } catch (error: any) {
+            if (!error.statusCode) error.statusCode = "500";
+            throw error;
+        }
+    }
     async update (id: string, data: Partial<T>) {
         try {
             return await this.controller.update(id, data);
@@ -54,7 +60,7 @@ class Service<T extends object> {
         }
     }
     async search (
-        query: { [key in keyof T]?: string; },
+        query: { [key in keyof T]?: T[key]; },
         options?: {
             page?: number,
             take?: number,
@@ -86,11 +92,19 @@ class Service<T extends object> {
     }
 
     async export (format: string, reply: FastifyReply) {
-        // TODO: Add Options
         try {
             switch (format) {
                 case 'pdf':
                     return await this.controller.exportAsPdf(reply);
+                case 'json':
+                    throw new Error("Not implemented"); // TODO: Implement
+                // return await this.controller.exportAsJson(reply);
+                case 'csv':
+                    throw new Error("Not implemented"); // TODO: Implement
+                // return await this.controller.exportAsCsv(reply);
+                case 'xlsx':
+                    throw new Error("Not implemented"); // TODO: Implement
+                // return await this.controller.exportAsXlsx(reply);
                 default:
                     const statusCode = 400;
                     const error: any = new Error("Unspecified format.");

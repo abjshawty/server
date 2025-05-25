@@ -39,24 +39,11 @@ class Controller<T extends object> {
             throw error;
         }
     }
-    async update (id: string, data: Partial<T>): Promise<T> {
+    async find (query: { [key in keyof T]?: T[key]; }): Promise<T> {
         try {
-            return await this.collection.update({
+            return await this.collection.findFirst({
                 where: {
-                    id
-                },
-                data
-            });
-        } catch (error: any) {
-            if (!error.statusCode) error.statusCode = "500";
-            throw error;
-        }
-    }
-    async delete (id: string): Promise<T> {
-        try {
-            return await this.collection.delete({
-                where: {
-                    id
+                    ...query
                 }
             });
         } catch (error: any) {
@@ -65,7 +52,7 @@ class Controller<T extends object> {
         }
     }
     async search (
-        query: { [key in keyof T]?: string; },
+        query: { [key in keyof T]?: T[key]; },
         options?: {
             take?: number,
             skip?: number,
@@ -86,7 +73,7 @@ class Controller<T extends object> {
         }
     }
     async paginatedSearch (
-        query: { [key in keyof T]?: string; },
+        query: { [key in keyof T]?: T[key]; },
         options: {
             take: number,
             skip: number,
@@ -170,7 +157,31 @@ class Controller<T extends object> {
             throw error;
         }
     }
+    async update (id: string, data: Partial<T>): Promise<T> {
+        try {
+            return await this.collection.update({
+                where: {
+                    id
+                },
+                data
+            });
+        } catch (error: any) {
+            if (!error.statusCode) error.statusCode = "500";
+            throw error;
+        }
+    }
+    async delete (id: string): Promise<T> {
+        try {
+            return await this.collection.delete({
+                where: {
+                    id
+                }
+            });
+        } catch (error: any) {
+            if (!error.statusCode) error.statusCode = "500";
+            throw error;
+        }
+    }
 }
-
 
 export default Controller;

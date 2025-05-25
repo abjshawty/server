@@ -2,7 +2,7 @@ import { FastifyPluginCallback, FastifyReply, FastifyRequest } from "fastify";
 import { Example as Build } from "@prisma/client";
 import { Example as Service } from "../services";
 import { Example as Schema } from "../schemas";
-// TODO: Implement a tryCatch function based on t3.gg
+
 const routes: FastifyPluginCallback = (server) => {
     server.route({
         method: "POST",
@@ -28,6 +28,16 @@ const routes: FastifyPluginCallback = (server) => {
         schema: Schema.search,
         handler: async (request: FastifyRequest<{ Querystring: { name: string; }; }>, reply: FastifyReply) => {
             const result = await Service.search(request.query, { include: { ExampleAttach: true } });
+            reply.send({ data: result });
+        }
+    });
+
+    server.route({
+        method: "GET",
+        url: "/find",
+        schema: Schema.find,
+        handler: async (request: FastifyRequest<{ Querystring: { name: string; }; }>, reply: FastifyReply) => {
+            const result = await Service.find(request.query);
             reply.send({ data: result });
         }
     });

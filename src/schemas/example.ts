@@ -7,6 +7,15 @@ export const search = {
         required: ["name"],
     },
 };
+export const find = {
+    querystring: {
+        type: "object",
+        properties: {
+            name: { type: "string" },
+        },
+        required: ["name"],
+    },
+};
 
 export const getOrDelete = {
     params: {
