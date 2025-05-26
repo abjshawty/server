@@ -1,6 +1,6 @@
 {
     "name": "server-template",
-    "version": "0.2.0",
+    "version": "0.1.7",
     "private": true,
     "description": "Functional template for a backend server, using Fastify and Prisma, and able to handle Kafka",
     "keywords": [
@@ -48,6 +48,7 @@
         "jest": "29.7.0",
         "nodemon": "3.1.9",
         "pino-pretty": "13.0.0",
+        "prettier-plugin-space-before-function-paren": "^0.0.8",
         "ts-node": "10.9.2",
         "typescript": "5.8.3"
     },

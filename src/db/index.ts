@@ -3,8 +3,8 @@
  * Provides access to the Prisma client and database connection management.
  */
 
-import { Database as messages } from "../messages";
-import { PrismaClient } from "@prisma/client";
+import { Database as messages } from '../messages';
+import { PrismaClient } from '@prisma/client';
 
 /**
  * Prisma client instance for database operations.
@@ -32,12 +32,12 @@ export const client = new PrismaClient();
  * process.on('SIGINT', die);
  */
 export const die = () => {
-  client
-    .$disconnect()
-    .then(() => {
-      messages.die();
-    })
-    .catch((error) => {
-      console.error("Error disconnecting from database:", error);
-    });
+	client
+		.$disconnect()
+		.then(() => {
+			messages.die();
+		})
+		.catch(error => {
+			console.error('Error disconnecting from database:', error);
+		});
 };
