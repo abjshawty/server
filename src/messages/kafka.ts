@@ -1,18 +1,19 @@
-import { log } from "console";
-import { env } from "../helpers";
-import * as locales from "../locales";
+import { log } from 'console';
+import { language } from '../helpers/env';
+import * as locales from '../locales';
 let lang: {
-    Database?: any;
-    Kafka: any;
-    Server?: any;
+	Auth?: any;
+	Database?: any;
+	Kafka: any;
+	Server?: any;
 };
-if (env.language == "en-US") {
-    lang = locales.en;
+if (language == 'en-US') {
+	lang = locales.en;
 } else {
-    lang = locales.fr;
+	lang = locales.fr;
 }
 export default {
-    start: () => log(`${lang.Kafka.start}`),
-    error: (error: Error, message?: string) => log(`${lang.Kafka.error}, ${message}:\n${error.message}`),
-    close: () => log(`${lang.Kafka.close}`),
+	start: () => log(`${lang.Kafka.start}`),
+	error: (error: Error, message?: string) => log(`${lang.Kafka.error}, ${message}:\n${error.message}`),
+	close: () => log(`${lang.Kafka.close}`)
 };

@@ -1,28 +1,43 @@
-import { Database as messages } from "../messages";
-import { PrismaClient } from "@prisma/client";
-import { Prisma } from ".prisma/client";
-const dmmf = Prisma.dmmf;
+/**
+ * @file Database configuration and utilities
+ * Provides access to the Prisma client and database connection management.
+ */
+
+import { Database as messages } from '../messages';
+import { PrismaClient } from '@prisma/client';
+
+/**
+ * Prisma client instance for database operations.
+ * Use this client to perform all database queries.
+ *
+ * @example
+ * // Import and use the client
+ * import { client } from './db';
+ *
+ * // Example query
+ * const users = await client.user.findMany();
+ */
 export const client = new PrismaClient();
+
+/**
+ * Gracefully shuts down the database connection.
+ * Call this when the application is shutting down to ensure
+ * all database connections are properly closed.
+ *
+ * @example
+ * // On application shutdown
+ * import { die } from './db';
+ *
+ * process.on('SIGTERM', die);
+ * process.on('SIGINT', die);
+ */
 export const die = () => {
-    client.$disconnect();
-    messages.die();
-};
-
-export const relations = (model: string) => {
-    const modelObject = dmmf.datamodel.models.find(m => m.name === model);
-    if (modelObject) {
-        const relationNames: string[] = modelObject.fields
-            .filter((f: any) => f.kind === "object")
-            .map((f: any) => f.name);
-
-        let customObject = {};
-        for (const attr of relationNames) {
-            customObject[attr] = true;
-        }
-        return customObject;
-    }
-    const error: any = new Error();
-    error.statusCode = "404";
-    error.message = `Model ${model} not found`;
-    throw error;
+	client
+		.$disconnect()
+		.then(() => {
+			messages.die();
+		})
+		.catch(error => {
+			console.error('Error disconnecting from database:', error);
+		});
 };

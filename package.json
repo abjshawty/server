@@ -1,18 +1,30 @@
 {
-    "name": "server",
-    "version": "0.1.2",
+    "name": "server-template",
+    "version": "0.2.0",
     "private": true,
-    "description": "Server",
+    "description": "Functional template for a backend server, using Fastify and Prisma, and able to handle Kafka",
+    "keywords": [
+        "server",
+        "template",
+        "fastify",
+        "prisma",
+        "kafka"
+    ],
     "main": "build/index.js",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/abjshawty/server.git"
+    },
     "scripts": {
         "build": "tsc",
         "dev": "nodemon src/index.ts",
         "start": "node build/index.js",
         "test": "jest --watchAll",
         "gen": "npx prisma generate",
+        "format": "prettier --write ./src",
         "migrate": "npx prisma migrate dev --name dev",
-        "hard-dev": "npm i && npx prisma migrate reset --force && npx prisma migrate dev --name dev && nodemon src/index.ts",
-        "prestart": "npm i && npx prisma migrate reset --force && npx prisma migrate dev --name dev && tsc && node build/index.js"
+        "reset": "npm i && npx prisma migrate reset --force && npx prisma migrate dev --name dev",
+        "create": "npx prisma generate && ts-node src/helpers/generator.ts && prettier --write ./src"
     },
     "dependencies": {
         "@fastify/cors": "11.0.1",
@@ -22,9 +34,12 @@
         "@prisma/client": "6.6.0",
         "death": "1.1.0",
         "dotenv": "16.5.0",
+        "exceljs": "^4.4.0",
         "fastify": "5.3.0",
+        "json2csv": "^6.0.0-alpha.2",
         "kafkajs": "2.2.4",
-        "pdfkit-table": "^0.1.99"
+        "pdfkit-table": "^0.1.99",
+        "prettier": "^3.5.3"
     },
     "devDependencies": {
         "@types/death": "1.1.5",
@@ -33,11 +48,12 @@
         "jest": "29.7.0",
         "nodemon": "3.1.9",
         "pino-pretty": "13.0.0",
+        "prettier-plugin-space-before-function-paren": "^0.0.8",
         "ts-node": "10.9.2",
         "typescript": "5.8.3"
     },
     "author": "Timmy Kouadio-Bhegnin",
-    "license": "UNLICENSED",
+    "license": "MIT",
     "jest": {
         "verbose": true,
         "testEnvironment": "node",
