@@ -1,6 +1,6 @@
 {
     "name": "server-template",
-    "version": "0.1.7",
+    "version": "0.2.0",
     "private": true,
     "description": "Functional template for a backend server, using Fastify and Prisma, and able to handle Kafka",
     "keywords": [
