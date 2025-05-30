@@ -174,6 +174,21 @@ class Controller<T extends object> {
 	}
 
 	/**
+	 * Counts the number of records that match the query
+	 * @param query - The query conditions to match
+	 * @returns The count of matching records
+	 * @throws {Error} Will throw a 500 error if count fails
+	 */
+	async count (query?: { [key in keyof T]?: T[key] }): Promise<number> {
+		try {
+			return await this.collection.count({ where: { ...query } });
+		} catch (error: any) {
+			if (!error.statusCode) error.statusCode = '500';
+			throw error;
+		}
+	}
+
+	/**
 	 * Updates a record by ID
 	 * @param id - The ID of the record to update
 	 * @param data - The data to update
