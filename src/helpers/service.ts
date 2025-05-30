@@ -139,18 +139,17 @@ class Service<T extends object> {
 			page?: number;
 			take?: number;
 			orderBy?: { [key in keyof T]?: 'asc' | 'desc' };
-			include?: { [key: string]: boolean };
-		},
-		strict: boolean = false
+			include?: { [key: string]: boolean; };
+		}
 	): Promise<
 		| T[]
 		| {
-				record: T[];
-				count: number;
-				items: number;
-				pages: number;
-				currentPage: number;
-		  }
+			record: T[];
+			count: number;
+			items: number;
+			pages: number;
+			currentPage: number;
+		}
 	> {
 		try {
 			let passingOptions: {
@@ -172,9 +171,50 @@ class Service<T extends object> {
 				};
 			}
 
-			return strict
-				? await this.controller.search(query, passingOptions)
-				: await this.controller.paginatedSearch(query, passingOptions);
+			return await this.controller.search(query, passingOptions);
+		} catch (error: any) {
+			if (!error.statusCode) error.statusCode = '500';
+			throw error;
+		}
+	}
+
+	async paginatedSearch (
+		query: { [key in keyof T]?: T[key] },
+		options?: {
+			page?: number;
+			take?: number;
+			orderBy?: { [key in keyof T]?: 'asc' | 'desc' };
+			include?: { [key: string]: boolean; };
+		}
+	): Promise<
+		{
+			record: T[],
+			count: number,
+			items: number,
+			pages: number,
+			currentPage: number;
+		}> {
+		try {
+			let passingOptions: {
+				take: number;
+				skip: number;
+				orderBy?: { [key in keyof T]?: 'asc' | 'desc' };
+			};
+
+			if (!options) {
+				passingOptions = {
+					take: 10,
+					skip: 0
+				};
+			} else {
+				passingOptions = {
+					take: options.take || 10,
+					skip: ((options.page || 1) - 1) * (options.take || 10),
+					orderBy: options.orderBy
+				};
+			}
+
+			return await this.controller.paginatedSearch(query, passingOptions);
 		} catch (error: any) {
 			if (!error.statusCode) error.statusCode = '500';
 			throw error;
