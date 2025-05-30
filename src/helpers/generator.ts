@@ -225,9 +225,9 @@ class PrismaGenerator {
 	 * @param model - The model to generate a controller for
 	 */
 	private async generateController (model: ModelInfo): Promise<void> {
-		const controllerPath = path.join(this.outputDirs.controllers, `${model.name.toLowerCase()}.ts`);
+		const controllerPath = path.join(this.outputDirs.controllers, `${this.formatName(model.name)}.ts`);
 		const className = model.name;
-		const varName = model.name.toLowerCase();
+		const varName = this.formatName(model.name);
 
 		const content = `import { ${className} as Build } from "@prisma/client";
 import { ControllerFactory } from "../helpers";
@@ -244,7 +244,7 @@ export default new Controller('${varName}');
 	 * @param model - The model to generate a service for
 	 */
 	private async generateService (model: ModelInfo): Promise<void> {
-		const servicePath = path.join(this.outputDirs.services, `${model.name.toLowerCase()}.ts`);
+		const servicePath = path.join(this.outputDirs.services, `${this.formatName(model.name)}.ts`);
 		const className = model.name;
 
 		const content = `import { ${className} as Build } from "@prisma/client";
@@ -263,7 +263,7 @@ export default new Service(Controller);
 	 * @param model - The model to generate a schema for
 	 */
 	private async generateSchema (model: ModelInfo): Promise<void> {
-		const schemaPath = path.join(this.outputDirs.schemas, `${model.name.toLowerCase()}.ts`);
+		const schemaPath = path.join(this.outputDirs.schemas, `${this.formatName(model.name)}.ts`);
 		const requiredFields = model.fields
 			.filter(
 				f =>
@@ -369,7 +369,7 @@ export const update = {
 	 */
 	private async updateIndexFile (directory: string, modelName: string, exportName: string): Promise<void> {
 		const indexPath = path.join(directory, 'index.ts');
-		const modelLower = modelName.toLowerCase();
+		const modelLower = this.formatName(modelName);
 
 		try {
 			let content = '';
@@ -421,7 +421,7 @@ export const update = {
 	 */
 	private async updateSchemaIndex (modelName: string): Promise<void> {
 		const indexPath = path.join(this.outputDirs.schemas, 'index.ts');
-		const modelLower = modelName.toLowerCase();
+		const modelLower = this.formatName(modelName);
 		const exportName = modelName;
 		const exportStatement = `export * as ${exportName} from './${modelLower}'`;
 
@@ -540,7 +540,7 @@ export const update = {
 	 */
 	private async generateRouteFile (model: ModelInfo): Promise<void> {
 		const routesDir = this.outputDirs.routes;
-		const routePath = path.join(routesDir, `${model.name.toLowerCase()}.ts`);
+		const routePath = path.join(routesDir, `${this.formatName(model.name)}.ts`);
 		const className = model.name;
 		const varName = this.formatName(model.name);
 
