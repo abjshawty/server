@@ -30,7 +30,7 @@ class Service<T extends object> {
 	 * @returns The created record
 	 * @throws Will throw an error if creation fails
 	 */
-	async create (data: T) {
+	async create (data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>) {
 		try {
 			return await this.controller.create(data);
 		} catch (error: any) {
