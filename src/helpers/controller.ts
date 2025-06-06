@@ -50,7 +50,6 @@ class Controller<T extends object> {
 			throw error;
 		}
 	}
-	// TODO: Write documentation
 	/**
 	 * Creates a new record in the database with default values
 	 * @param data - The data to create the record with
@@ -520,8 +519,6 @@ class Controller<T extends object> {
 			throw error;
 		}
 	}
-
-	// TODO: Add limit to search methods
 }
 
 export default Controller;

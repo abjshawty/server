@@ -1,6 +1,12 @@
 import { Kafka, Producer, Consumer } from 'kafkajs';
 import { Kafka as messages } from '../messages';
 import { env } from '.';
+
+/**
+ * Kafka worker class that handles Kafka operations.
+ * Provides a generic interface for Kafka operations.
+ * Acts as an abstraction layer between the service layer and the Kafka client.
+ */
 class KafkaWorker {
 	private broker: string;
 	private conditions: { producer: boolean; consumer: boolean; };
@@ -9,6 +15,12 @@ class KafkaWorker {
 	private producer: Producer;
 	private consumer: Consumer;
 	private topics: string[];
+	/**
+	 * Creates a new Kafka worker instance for the specified collection
+	 * @param broker - The name of the Prisma model (lowercase)
+	 * @param clientId - The client ID for the Kafka client
+	 * @param topics - The topics to subscribe to
+	 */
 	constructor (broker: string, clientId: string, topics: string[]) {
 		this.broker = broker;
 		this.conditions = { producer: false, consumer: false };
@@ -21,6 +33,9 @@ class KafkaWorker {
 		this.consumer = this.kafka.consumer({ groupId: env.kafkaGroupId });
 		this.topics = topics;
 	}
+	/**
+	 * Activates consumer capacity for the worker
+	 */
 	public async consume (callback?: (record: Record<string, any>) => Promise<void> | void) {
 		for (const topic of this.topics) {
 			await this.consumer
@@ -46,10 +61,18 @@ class KafkaWorker {
 			}
 		});
 	}
+	/**
+	 * Activates producer capacity for the worker
+	 */
 	public async produce () {
 		await this.producer.connect();
 		this.conditions.producer = true;
 	}
+	/**
+	 * Sends a message to the specified topic
+	 * @param record - The record to send
+	 * @param topic - The topic to send to
+	 */
 	public async send (record: Record<string, any>, topic: string) {
 		await this.producer.send({
 			topic,
@@ -60,6 +83,9 @@ class KafkaWorker {
 			]
 		});
 	}
+	/**
+	 * Closes the producer and consumer connections
+	 */
 	public close () {
 		if (this.conditions.producer) this.producer.disconnect();
 		if (this.conditions.consumer) this.consumer.disconnect();
@@ -67,4 +93,3 @@ class KafkaWorker {
 	}
 }
 export default new KafkaWorker(env.kafkaBroker, env.kafkaClientId, env.topics);
-// TODO: Add Documentation
