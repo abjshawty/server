@@ -1,10 +1,9 @@
 import { Kafka, Producer, Consumer } from 'kafkajs';
 import { Kafka as messages } from '../messages';
-import * as Service from '../services';
 import { env } from '.';
-class KafkaMaker {
+class KafkaWorker {
 	private broker: string;
-	private conditions: { producer: boolean; consumer: boolean };
+	private conditions: { producer: boolean; consumer: boolean; };
 	private clientId: string;
 	private kafka: Kafka;
 	private producer: Producer;
@@ -22,7 +21,7 @@ class KafkaMaker {
 		this.consumer = this.kafka.consumer({ groupId: env.kafkaGroupId });
 		this.topics = topics;
 	}
-	public async consume () {
+	public async consume (callback?: (record: Record<string, any>) => Promise<void> | void) {
 		for (const topic of this.topics) {
 			await this.consumer
 				.subscribe({
@@ -40,7 +39,7 @@ class KafkaMaker {
 				const service = (topic.charAt(0).toUpperCase() + topic.slice(1)).slice(0, -1);
 				try {
 					const record = JSON.parse(message.value!.toString());
-					await Service[service].create(record);
+					await callback?.(record);
 				} catch (error: any) {
 					messages.error(error, `Failed to create ${service}`);
 				}
@@ -67,4 +66,5 @@ class KafkaMaker {
 		messages.close();
 	}
 }
-export default new KafkaMaker(env.kafkaBroker, env.kafkaClientId, env.topics);
+export default new KafkaWorker(env.kafkaBroker, env.kafkaClientId, env.topics);
+// TODO: Add Documentation
