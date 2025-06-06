@@ -148,7 +148,7 @@ class Server {
 			}
 		});
 		this.server.register(swagger_ui, {
-			routePrefix: '/docs',
+			routePrefix: '/docs'
 		});
 	}
 	private errorHandler (): void {
@@ -165,8 +165,6 @@ class Server {
 			this.server.log.info(`Request URL: ${request.url}`);
 			done();
 		});
-
-
 	}
 	private routes () {
 		const options = {

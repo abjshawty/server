@@ -81,9 +81,14 @@ class Service<T extends object> {
 	 * @throws {Error} Will throw a 404 error if record is not found
 	 * @throws Will throw a 500 error if retrieval fails
 	 */
-	async getById (id: string) {
+	async getById (
+		id: string,
+		options?: {
+			include?: { [key: string]: boolean; };
+		}
+	) {
 		try {
-			const result = await this.controller.getById(id);
+			const result = await this.controller.getById(id, options);
 			if (!result) {
 				const error: any = new Error('Not found');
 				error.statusCode = 404;
@@ -102,9 +107,14 @@ class Service<T extends object> {
 	 * @returns The first matching record or null if none found
 	 * @throws Will throw an error if the query fails
 	 */
-	async find (query: { [key in keyof T]?: T[key] }) {
+	async find (
+		query: { [key in keyof T]?: T[key] },
+		options?: {
+			include?: { [key: string]: boolean; };
+		}
+	) {
 		try {
-			return await this.controller.find(query);
+			return await this.controller.find(query, options);
 		} catch (error: any) {
 			if (!error.statusCode) error.statusCode = '500';
 			throw error;
@@ -117,9 +127,14 @@ class Service<T extends object> {
 	 * @returns The count of matching records
 	 * @throws Will throw an error if count fails
 	 */
-	async count (query?: { [key in keyof T]?: T[key] }): Promise<number> {
+	async count (
+		query?: { [key in keyof T]?: T[key] },
+		options?: {
+			include?: { [key: string]: boolean; };
+		}
+	): Promise<number> {
 		try {
-			return await this.controller.count(query);
+			return await this.controller.count(query, options);
 		} catch (error: any) {
 			if (!error.statusCode) error.statusCode = '500';
 			throw error;
@@ -264,14 +279,13 @@ class Service<T extends object> {
 			orderBy?: { [key in keyof T]?: 'asc' | 'desc' };
 			include?: { [key: string]: boolean; };
 		}
-	): Promise<
-		{
-			record: T[],
-			count: number,
-			items: number,
-			pages: number,
-			currentPage: number;
-		}> {
+	): Promise<{
+		record: T[];
+		count: number;
+		items: number;
+		pages: number;
+		currentPage: number;
+	}> {
 		try {
 			let passingOptions: {
 				take: number;

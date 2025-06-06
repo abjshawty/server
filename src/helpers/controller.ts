@@ -18,7 +18,6 @@ import ExcelJS from 'exceljs';
  * @template T - The type of the model this controller operates on
  */
 class Controller<T extends object> {
-
 	/** The Prisma client collection for the model */
 	protected collection: any;
 
@@ -73,10 +72,16 @@ class Controller<T extends object> {
 	 * @returns The found record or null if not found
 	 * @throws {Error} Will throw a 404 error if record is not found
 	 */
-	async getById (id: string): Promise<T> {
+	async getById (
+		id: string,
+		options?: {
+			include?: { [key: string]: boolean; };
+		}
+	): Promise<T> {
 		try {
 			return await this.collection.findUnique({
-				where: { id }
+				where: { id },
+				...options
 			});
 		} catch (error: any) {
 			if (!error.statusCode) error.statusCode = '404';
@@ -112,10 +117,16 @@ class Controller<T extends object> {
 	 * @returns The first matching record or null if none found
 	 * @throws {Error} Will throw a 500 error if query fails
 	 */
-	async find (query: { [key in keyof T]?: T[key] }): Promise<T> {
+	async find (
+		query: { [key in keyof T]?: T[key] },
+		options?: {
+			include?: { [key: string]: boolean; };
+		}
+	): Promise<T> {
 		try {
 			return await this.collection.findFirst({
-				where: { ...query }
+				where: { ...query },
+				...options
 			});
 		} catch (error: any) {
 			if (!error.statusCode) error.statusCode = '500';
@@ -204,9 +215,14 @@ class Controller<T extends object> {
 	 * @returns The count of matching records
 	 * @throws {Error} Will throw a 500 error if count fails
 	 */
-	async count (query?: { [key in keyof T]?: T[key] }): Promise<number> {
+	async count (
+		query?: { [key in keyof T]?: T[key] },
+		options?: {
+			include?: { [key: string]: boolean; };
+		}
+	): Promise<number> {
 		try {
-			return await this.collection.count({ where: { ...query } });
+			return await this.collection.count({ where: { ...query }, ...options });
 		} catch (error: any) {
 			if (!error.statusCode) error.statusCode = '500';
 			throw error;
@@ -239,7 +255,7 @@ class Controller<T extends object> {
 	 * @returns The updated records
 	 * @throws {Error} Will throw a 500 error if update fails
 	 */
-	async updateMany (query: { [key in keyof T]?: T[key] | undefined; }, data: Partial<T>) {
+	async updateMany (query: { [key in keyof T]?: T[key] | undefined }, data: Partial<T>) {
 		try {
 			return await this.collection.updateMany({
 				where: { ...query },
@@ -274,7 +290,7 @@ class Controller<T extends object> {
 	 * @returns The deleted records
 	 * @throws {Error} Will throw a 500 error if deletion fails
 	 */
-	async deleteMany (query: { [key in keyof T]?: T[key] | undefined; }) {
+	async deleteMany (query: { [key in keyof T]?: T[key] | undefined }) {
 		try {
 			return await this.collection.deleteMany({
 				where: { ...query }
