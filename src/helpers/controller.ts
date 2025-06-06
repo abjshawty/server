@@ -20,7 +20,7 @@ import ExcelJS from 'exceljs';
 class Controller<T extends object> {
 
 	/** The Prisma client collection for the model */
-	private collection: any;
+	protected collection: any;
 
 	/** The name of the model (capitalized) */
 	private name: string;
