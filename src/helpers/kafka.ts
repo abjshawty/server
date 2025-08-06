@@ -1,15 +1,26 @@
 import { Kafka, Producer, Consumer } from 'kafkajs';
 import { Kafka as messages } from '../messages';
-import * as Service from '../services';
 import { env } from '.';
-class KafkaMaker {
+
+/**
+ * Kafka worker class that handles Kafka operations.
+ * Provides a generic interface for Kafka operations.
+ * Acts as an abstraction layer between the service layer and the Kafka client.
+ */
+class KafkaWorker {
 	private broker: string;
-	private conditions: { producer: boolean; consumer: boolean };
+	private conditions: { producer: boolean; consumer: boolean; };
 	private clientId: string;
 	private kafka: Kafka;
 	private producer: Producer;
 	private consumer: Consumer;
 	private topics: string[];
+	/**
+	 * Creates a new Kafka worker instance for the specified collection
+	 * @param broker - The name of the Prisma model (lowercase)
+	 * @param clientId - The client ID for the Kafka client
+	 * @param topics - The topics to subscribe to
+	 */
 	constructor (broker: string, clientId: string, topics: string[]) {
 		this.broker = broker;
 		this.conditions = { producer: false, consumer: false };
@@ -22,7 +33,10 @@ class KafkaMaker {
 		this.consumer = this.kafka.consumer({ groupId: env.kafkaGroupId });
 		this.topics = topics;
 	}
-	public async consume () {
+	/**
+	 * Activates consumer capacity for the worker
+	 */
+	public async consume (callback?: (record: Record<string, any>) => Promise<void> | void) {
 		for (const topic of this.topics) {
 			await this.consumer
 				.subscribe({
@@ -40,17 +54,25 @@ class KafkaMaker {
 				const service = (topic.charAt(0).toUpperCase() + topic.slice(1)).slice(0, -1);
 				try {
 					const record = JSON.parse(message.value!.toString());
-					await Service[service].create(record);
+					await callback?.(record);
 				} catch (error: any) {
 					messages.error(error, `Failed to create ${service}`);
 				}
 			}
 		});
 	}
+	/**
+	 * Activates producer capacity for the worker
+	 */
 	public async produce () {
 		await this.producer.connect();
 		this.conditions.producer = true;
 	}
+	/**
+	 * Sends a message to the specified topic
+	 * @param record - The record to send
+	 * @param topic - The topic to send to
+	 */
 	public async send (record: Record<string, any>, topic: string) {
 		await this.producer.send({
 			topic,
@@ -61,10 +83,13 @@ class KafkaMaker {
 			]
 		});
 	}
+	/**
+	 * Closes the producer and consumer connections
+	 */
 	public close () {
 		if (this.conditions.producer) this.producer.disconnect();
 		if (this.conditions.consumer) this.consumer.disconnect();
 		messages.close();
 	}
 }
-export default new KafkaMaker(env.kafkaBroker, env.kafkaClientId, env.topics);
+export default new KafkaWorker(env.kafkaBroker, env.kafkaClientId, env.topics);

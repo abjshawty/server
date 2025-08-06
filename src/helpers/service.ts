@@ -30,9 +30,24 @@ class Service<T extends object> {
 	 * @returns The created record
 	 * @throws Will throw an error if creation fails
 	 */
-	async create (data: T) {
+	async create (data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>) {
 		try {
 			return await this.controller.create(data);
+		} catch (error: any) {
+			if (!error.statusCode) error.statusCode = '500';
+			throw error;
+		}
+	}
+
+	/**
+	 * Creates a new record in the database with default values
+	 * @param data - The data to create the record with
+	 * @returns The created record
+	 * @throws Will throw an error if creation fails
+	 */
+	async createDefault (data: T) {
+		try {
+			return await this.controller.createDefault(data);
 		} catch (error: any) {
 			if (!error.statusCode) error.statusCode = '500';
 			throw error;
@@ -44,9 +59,15 @@ class Service<T extends object> {
 	 * @returns An array of all records
 	 * @throws Will throw an error if retrieval fails
 	 */
-	async getAll () {
+	async getAll (options?: {
+		orderBy?: { [key in keyof T]?: 'asc' | 'desc' };
+		omit?: {
+			[key in keyof Omit<T, 'id' | 'createdAt' | 'updatedAt'>]?: boolean;
+		};
+		include?: { [key: string]: boolean; };
+	}) {
 		try {
-			return await this.controller.getAll();
+			return await this.controller.getAll(options);
 		} catch (error: any) {
 			if (!error.statusCode) error.statusCode = '500';
 			throw error;
@@ -60,9 +81,14 @@ class Service<T extends object> {
 	 * @throws {Error} Will throw a 404 error if record is not found
 	 * @throws Will throw a 500 error if retrieval fails
 	 */
-	async getById (id: string) {
+	async getById (
+		id: string,
+		options?: {
+			include?: { [key: string]: boolean; };
+		}
+	) {
 		try {
-			const result = await this.controller.getById(id);
+			const result = await this.controller.getById(id, options);
 			if (!result) {
 				const error: any = new Error('Not found');
 				error.statusCode = 404;
@@ -81,9 +107,34 @@ class Service<T extends object> {
 	 * @returns The first matching record or null if none found
 	 * @throws Will throw an error if the query fails
 	 */
-	async find (query: { [key in keyof T]?: T[key] }) {
+	async find (
+		query: { [key in keyof T]?: T[key] },
+		options?: {
+			include?: { [key: string]: boolean; };
+		}
+	) {
 		try {
-			return await this.controller.find(query);
+			return await this.controller.find(query, options);
+		} catch (error: any) {
+			if (!error.statusCode) error.statusCode = '500';
+			throw error;
+		}
+	}
+
+	/**
+	 * Counts the number of records that match the query
+	 * @param query - The query conditions to match
+	 * @returns The count of matching records
+	 * @throws Will throw an error if count fails
+	 */
+	async count (
+		query?: { [key in keyof T]?: T[key] },
+		options?: {
+			include?: { [key: string]: boolean; };
+		}
+	): Promise<number> {
+		try {
+			return await this.controller.count(query, options);
 		} catch (error: any) {
 			if (!error.statusCode) error.statusCode = '500';
 			throw error;
@@ -107,6 +158,22 @@ class Service<T extends object> {
 	}
 
 	/**
+	 * Updates multiple records that match the query
+	 * @param query - The query conditions to match
+	 * @param data - The data to update
+	 * @returns The updated records
+	 * @throws Will throw an error if update fails
+	 */
+	async updateMany (query: { [key in keyof T]?: T[key] }, data: Partial<T>) {
+		try {
+			return await this.controller.updateMany(query, data);
+		} catch (error: any) {
+			if (!error.statusCode) error.statusCode = '500';
+			throw error;
+		}
+	}
+
+	/**
 	 * Deletes a record by ID
 	 * @param id - The ID of the record to delete
 	 * @returns The deleted record
@@ -115,6 +182,21 @@ class Service<T extends object> {
 	async delete (id: string) {
 		try {
 			return await this.controller.delete(id);
+		} catch (error: any) {
+			if (!error.statusCode) error.statusCode = '500';
+			throw error;
+		}
+	}
+
+	/**
+	 * Deletes multiple records that match the query
+	 * @param query - The query conditions to match
+	 * @returns The deleted records
+	 * @throws Will throw an error if deletion fails
+	 */
+	async deleteMany (query: { [key in keyof T]?: T[key] }) {
+		try {
+			return await this.controller.deleteMany(query);
 		} catch (error: any) {
 			if (!error.statusCode) error.statusCode = '500';
 			throw error;
@@ -139,18 +221,17 @@ class Service<T extends object> {
 			page?: number;
 			take?: number;
 			orderBy?: { [key in keyof T]?: 'asc' | 'desc' };
-			include?: { [key: string]: boolean };
-		},
-		strict: boolean = false
+			include?: { [key: string]: boolean; };
+		}
 	): Promise<
 		| T[]
 		| {
-				record: T[];
-				count: number;
-				items: number;
-				pages: number;
-				currentPage: number;
-		  }
+			record: T[];
+			count: number;
+			items: number;
+			pages: number;
+			currentPage: number;
+		}
 	> {
 		try {
 			let passingOptions: {
@@ -172,9 +253,62 @@ class Service<T extends object> {
 				};
 			}
 
-			return strict
-				? await this.controller.search(query, passingOptions)
-				: await this.controller.paginatedSearch(query, passingOptions);
+			return await this.controller.search(query, passingOptions);
+		} catch (error: any) {
+			if (!error.statusCode) error.statusCode = '500';
+			throw error;
+		}
+	}
+
+	/**
+	 * Searches for records approximately matching the query with pagination and sorting options
+	 * @param query - The search criteria
+	 * @param options - Pagination and sorting options
+	 * @param options.page - The page number (1-based)
+	 * @param options.take - Number of records per page
+	 * @param options.orderBy - Sorting criteria
+	 * @param options.include - Related models to include
+	 * @returns Paginated search results
+	 * @throws Will throw an error if search fails
+	 */
+	async paginatedSearch (
+		query: { [key in keyof T]?: T[key] },
+		options?: {
+			page?: number;
+			take?: number;
+			orderBy?: { [key in keyof T]?: 'asc' | 'desc' };
+			include?: { [key: string]: boolean; };
+		}
+	): Promise<{
+		record: T[];
+		count: number;
+		items: number;
+		pages: number;
+		currentPage: number;
+	}> {
+		try {
+			let passingOptions: {
+				take: number;
+				skip: number;
+				orderBy?: { [key in keyof T]?: 'asc' | 'desc' };
+				include?: { [key: string]: boolean; };
+			};
+
+			if (!options) {
+				passingOptions = {
+					take: 10,
+					skip: 0
+				};
+			} else {
+				passingOptions = {
+					take: options.take || 10,
+					skip: ((options.page || 1) - 1) * (options.take || 10),
+					orderBy: options.orderBy,
+					include: options?.include
+				};
+			}
+
+			return await this.controller.paginatedSearch(query, passingOptions);
 		} catch (error: any) {
 			if (!error.statusCode) error.statusCode = '500';
 			throw error;

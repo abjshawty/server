@@ -2,14 +2,16 @@ import Fastify, { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } 
 import { Server as messages } from '../messages';
 import { die as killDatabase } from '../db';
 import multipart from '@fastify/multipart';
+import swagger_ui from '@fastify/swagger-ui';
+import swagger from '@fastify/swagger';
 import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
-import { init } from '../utils';
 import jwt from '@fastify/jwt';
 import routes from '../routes';
 import death from 'death';
 import path from 'path';
 import { env, kafka } from '.';
+
 class Server {
 	private kafka: typeof kafka;
 	private host: string;
@@ -21,21 +23,60 @@ class Server {
 			logger: {
 				transport: {
 					targets: [
+						// Error Console
+						{
+							target: 'pino-pretty',
+							level: 'error',
+							options: {
+								colorize: true,
+								translateTime: true
+							}
+						},
+						// Error File
 						{
 							target: 'pino-pretty',
 							level: 'error',
 							options: {
 								destination: path.join(__dirname, '../logs/error.log'),
-								colorize: false,
+								colorize: true,
 								translateTime: true
 							}
 						},
+						// Info Console
+						{
+							target: 'pino-pretty',
+							level: 'info',
+							options: {
+								colorize: true,
+								translateTime: true
+							}
+						},
+						// Info File
 						{
 							target: 'pino-pretty',
 							level: 'info',
 							options: {
 								destination: path.join(__dirname, '../logs/server.log'),
-								colorize: false,
+								colorize: true,
+								translateTime: true
+							}
+						},
+						// Warning Console
+						{
+							target: 'pino-pretty',
+							level: 'warn',
+							options: {
+								colorize: true,
+								translateTime: true
+							}
+						},
+						// Warning File
+						{
+							target: 'pino-pretty',
+							level: 'warn',
+							options: {
+								destination: path.join(__dirname, '../logs/warnings.log'),
+								colorize: true,
 								translateTime: true
 							}
 						}
@@ -46,6 +87,7 @@ class Server {
 		this.port = env.port;
 		this.host = env.host;
 		this.config();
+		this.docs();
 		this.routes();
 		this.errorHandler();
 		this.kafka = kafka;
@@ -73,6 +115,7 @@ class Server {
 		this.server.register(jwt, { secret: env.jwtSecret });
 		this.server.register(multipart);
 		this.helmet();
+		this.hooks();
 		this.cors();
 		this.die();
 	}
@@ -88,13 +131,40 @@ class Server {
 	private die (): void {
 		death(() => this.bye());
 	}
+	private docs (): void {
+		this.server.register(swagger, {
+			openapi: {
+				info: {
+					title: `${env.apiName} API`,
+					version: env.apiVersion,
+					description: `${env.apiName} API`
+				},
+				servers: [
+					{
+						url: `http://${env.host}:${env.port}`,
+						description: `${env.apiName} API for local development`
+					}
+				]
+			}
+		});
+		this.server.register(swagger_ui, {
+			routePrefix: '/docs'
+		});
+	}
 	private errorHandler (): void {
 		this.server.setErrorHandler((error: FastifyError, request: FastifyRequest, response: FastifyReply) => {
+			this.server.log.error(error);
 			response.status(error.statusCode ? error.statusCode : 500).send(error);
 		});
 	}
 	private helmet (): void {
 		this.server.register(helmet);
+	}
+	private hooks (): void {
+		this.server.addHook('onRequest', (request, reply, done) => {
+			this.server.log.info(`Request URL: ${request.url}`);
+			done();
+		});
 	}
 	private routes () {
 		const options = {
@@ -109,20 +179,16 @@ class Server {
 				}
 			}
 		};
-		this.server.get('/', (request, response) => {
-			response.status(400).send({ info: 'Version Missing from path!' });
-		});
-		this.server.get(`/${env.apiVersion}/healthcheck`, options, (request, response) => {
-			response.send({ info: 'Server is healthy.' });
+		this.server.get('/', options, (request, response) => {
+			response.status(200).send({ info: `${env.apiName} server is up and running. Find docs at /docs.` });
 		});
 		this.server.get(`/${env.apiVersion}/close`, options, (request, response) => {
-			response.send({ info: 'Server closing gracefully.' });
+			response.status(200).send({ info: `${env.apiName} server closing gracefully.` });
 			this.bye();
 		});
 		this.server.register(routes, { prefix: `/${env.apiVersion}` });
 	}
 	public async start (): Promise<void> {
-		await init();
 		this.server
 			.listen({ port: this.port, host: this.host })
 			.then(() => {
@@ -130,7 +196,6 @@ class Server {
 			})
 			.catch(error => {
 				this.server.log.error(error);
-				console.error('Error starting server:', error);
 				env.murder();
 			});
 	}
