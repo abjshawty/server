@@ -15,7 +15,7 @@ export const jwtPublicKey: string = process.env.JWT_PUBLIC_KEY || 'secret';
 export const jwtSecret: string = process.env.JWT_SECRET || 'secret';
 export const kafkaBroker: string = process.env.KAFKA_BROKER || '';
 export const kafkaClientId: string = process.env.KAFKA_CLIENT_ID || '';
-export const kafkaGroupId: string = process.env.KAFKA_GROUP_ID || '';
+export const kafkaGroupId: string = process.env.KAFKA_GROUP_ID || 'null';
 export const language: string = process.env.LANGUAGE || 'en-US';
 export const murder: () => void = () => process.exit(0);
 export const port: number = process.env.APP_PORT ? parseInt(process.env.APP_PORT) : 3000;
