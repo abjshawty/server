@@ -1,14 +1,14 @@
 import { FastifyPluginCallback } from "fastify";
 import { Post as schema } from "../schemas";
 import { Post as api } from "../api";
-import { auth } from "../utils";
+// import { auth } from "../utils";
 
 const routes: FastifyPluginCallback = server => {
     server.route({
         method: 'POST',
         url: '/',
         schema: schema.create,
-        preHandler: auth,
+        // preHandler: auth,
         handler: api.create
     });
 
@@ -16,7 +16,7 @@ const routes: FastifyPluginCallback = server => {
         method: 'GET',
         url: '/',
         schema: schema.list,
-        preHandler: auth,
+        // preHandler: auth,
         handler: api.list
     });
 
@@ -24,7 +24,7 @@ const routes: FastifyPluginCallback = server => {
         method: 'GET',
         url: '/:id',
         schema: schema.read,
-        preHandler: auth,
+        // preHandler: auth,
         handler: api.read
     });
 
@@ -32,7 +32,7 @@ const routes: FastifyPluginCallback = server => {
         method: 'PUT',
         url: '/:id',
         schema: schema.update,
-        preHandler: auth,
+        // preHandler: auth,
         handler: api.update
     });
 
@@ -40,7 +40,7 @@ const routes: FastifyPluginCallback = server => {
         method: 'DELETE',
         url: '/:id',
         schema: schema.recycle,
-        preHandler: auth,
+        // preHandler: auth,
         handler: api.recycle
     });
 };

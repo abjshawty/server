@@ -22,3 +22,12 @@ export const port: number = process.env.APP_PORT ? parseInt(process.env.APP_PORT
 export const redisUrl: string = process.env.REDIS_URL || '';
 export const topics: string[] = process.env.KAFKA_TOPICS ? process.env.KAFKA_TOPICS.split(',') : [];
 export const role: role = (process.env.KAFKA_ROLE as role) || 'none';
+
+export const githubClientId: string | undefined = process.env.GITHUB_CLIENT_ID;
+export const githubClientSecret: string | undefined = process.env.GITHUB_CLIENT_SECRET;
+export const gitlabClientId: string | undefined = process.env.GITLAB_CLIENT_ID;
+export const gitlabClientSecret: string | undefined = process.env.GITLAB_CLIENT_SECRET;
+export const googleClientId: string | undefined = process.env.GOOGLE_CLIENT_ID;
+export const googleClientSecret: string | undefined = process.env.GOOGLE_CLIENT_SECRET;
+export const discordClientId: string | undefined = process.env.DISCORD_CLIENT_ID;
+export const discordClientSecret: string | undefined = process.env.DISCORD_CLIENT_SECRET;
