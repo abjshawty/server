@@ -1,1 +1,1 @@
-// TODO: Write tests
+console.log('No tests were written. Please contribute!');

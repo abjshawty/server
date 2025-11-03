@@ -1,7 +1,7 @@
 {
     "name": "server-template",
     "version": "0.3.2",
-    "private": true,
+    "private": "false",
     "description": "Functional template for a backend server, using Fastify and Prisma",
     "keywords": [
         "server",
@@ -14,6 +14,13 @@
         "type": "git",
         "url": "https://github.com/abjshawty/server.git"
     },
+    "bugs": {
+        "url": "https://github.com/abjshawty/server/issues",
+        "email": "kouadiobhegnino@gmail.com"
+    },
+    "contributors": [
+        "Timmy Kouadio-Bhegnin <kouadiobhegnino@gmail.com> (https://abjshawty.dev)"
+    ],
     "scripts": {
         "build": "tsc",
         "dev": "nodemon src/index.ts",
@@ -56,6 +63,7 @@
         "typescript": ">=5.9.3"
     },
     "author": "abjshawty",
+    "config": {},
     "license": "WTFPL",
     "jest": {
         "verbose": true,
