@@ -1,2 +1,5 @@
 import { FastifyInstance } from 'fastify';
-export default function (server: FastifyInstance) { }
+import post from './post';
+export default function (server: FastifyInstance) {
+    server.register(post, { prefix: '/post' });
+}

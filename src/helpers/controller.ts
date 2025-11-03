@@ -55,7 +55,7 @@ class Controller<T extends object> {
 	 * @returns The created record
 	 * @throws {Error} Will throw a 500 error if creation fails
 	 */
-	async createDefault (data: T) {
+	async createDefault (data: T): Promise<T> {
 		try {
 			return await this.collection.create({
 				data

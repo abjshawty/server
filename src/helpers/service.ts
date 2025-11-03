@@ -30,7 +30,7 @@ class Service<T extends object> {
 	 * @returns The created record
 	 * @throws Will throw an error if creation fails
 	 */
-	async create (data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>) {
+	async create (data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T> {
 		try {
 			return await this.controller.create(data);
 		} catch (error: any) {
@@ -45,7 +45,7 @@ class Service<T extends object> {
 	 * @returns The created record
 	 * @throws Will throw an error if creation fails
 	 */
-	async createDefault (data: T) {
+	async createDefault (data: T): Promise<T> {
 		try {
 			return await this.controller.createDefault(data);
 		} catch (error: any) {
@@ -65,7 +65,7 @@ class Service<T extends object> {
 			[key in keyof Omit<T, 'id' | 'createdAt' | 'updatedAt'>]?: boolean;
 		};
 		include?: { [key: string]: boolean; };
-	}) {
+	}): Promise<T[]> {
 		try {
 			return await this.controller.getAll(options);
 		} catch (error: any) {
@@ -86,7 +86,7 @@ class Service<T extends object> {
 		options?: {
 			include?: { [key: string]: boolean; };
 		}
-	) {
+	): Promise<T> {
 		try {
 			const result = await this.controller.getById(id, options);
 			if (!result) {
@@ -112,7 +112,7 @@ class Service<T extends object> {
 		options?: {
 			include?: { [key: string]: boolean; };
 		}
-	) {
+	): Promise<T> {
 		try {
 			return await this.controller.find(query, options);
 		} catch (error: any) {
@@ -148,7 +148,7 @@ class Service<T extends object> {
 	 * @returns The updated record
 	 * @throws Will throw an error if update fails
 	 */
-	async update (id: string, data: Partial<T>) {
+	async update (id: string, data: Partial<T>): Promise<T> {
 		try {
 			return await this.controller.update(id, data);
 		} catch (error: any) {

@@ -1,2 +1,1 @@
-export { default as Example } from './example';
-export { default as User } from './user';
+export { default as Post } from './post';

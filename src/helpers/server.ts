@@ -42,15 +42,15 @@ class Server {
 								translateTime: true
 							}
 						},
-						// Info Console
-						{
-							target: 'pino-pretty',
-							level: 'info',
-							options: {
-								colorize: true,
-								translateTime: true
-							}
-						},
+						// Info Console (commented out by default)
+						// {
+						// 	target: 'pino-pretty',
+						// 	level: 'info',
+						// 	options: {
+						// 		colorize: true,
+						// 		translateTime: true
+						// 	}
+						// },
 						// Info File
 						{
 							target: 'pino-pretty',
@@ -95,6 +95,10 @@ class Server {
 		if (this.role === 'producer' || this.role === 'both') this.kafka.produce();
 		if (this.role === 'consumer' || this.role === 'both') this.kafka.consume();
 	}
+	/**
+	 * Closes the server and kills the database connection.
+	 * This method is called when the server is shutting down.
+	 */
 	private async bye (): Promise<void> {
 		killDatabase();
 		if (this.kafka) this.kafka.close();
@@ -110,6 +114,11 @@ class Server {
 				env.murder();
 			});
 	}
+
+	/**
+	 * Configures the server.
+	 * This method is called when the server is starting up.
+	 */
 	private config (): void {
 		if (env.jwtSecret === undefined) throw new Error('JWT secret not set');
 		this.server.register(jwt, { secret: env.jwtSecret });
@@ -119,6 +128,11 @@ class Server {
 		this.cors();
 		this.die();
 	}
+
+	/**
+	 * Configures the CORS middleware.
+	 * This method is called when the server is starting up.
+	 */
 	private cors (): void {
 		this.server.register(cors, {
 			origin: env.corsOrigin,
@@ -128,9 +142,19 @@ class Server {
 			credentials: true
 		});
 	}
+
+	/**
+	 * Configures the death middleware.
+	 * This method is called when the server is starting up.
+	 */
 	private die (): void {
 		death(() => this.bye());
 	}
+
+	/**
+	 * Configures the documentation middleware.
+	 * This method is called when the server is starting up.
+	 */
 	private docs (): void {
 		this.server.register(swagger, {
 			openapi: {
@@ -148,25 +172,45 @@ class Server {
 			}
 		});
 		this.server.register(swagger_ui, {
-			routePrefix: '/docs'
+			routePrefix: '/'
 		});
 	}
+
+	/**
+	 * Configures the error handler middleware.
+	 * This method is called when the server is starting up.
+	 */
 	private errorHandler (): void {
 		this.server.setErrorHandler((error: FastifyError, request: FastifyRequest, response: FastifyReply) => {
 			this.server.log.error(error);
 			response.status(error.statusCode ? error.statusCode : 500).send(error);
 		});
 	}
+
+	/**
+	 * Configures the helmet middleware.
+	 * This method is called when the server is starting up.
+	 */
 	private helmet (): void {
 		this.server.register(helmet);
 	}
+
+	/**
+	 * Configures the hooks middleware.
+	 * This method is called when the server is starting up.
+	 */
 	private hooks (): void {
-		this.server.addHook('onRequest', (request, reply, done) => {
-			this.server.log.info(`Request URL: ${request.url}`);
-			done();
-		});
+		// this.server.addHook('onRequest', (request, reply, done) => {
+		// 	this.server.log.info(`Request URL: ${request.url}`);
+		// 	done();
+		// });
 	}
-	private routes () {
+
+	/**
+	 * Configures the routes middleware.
+	 * This method is called when the server is starting up.
+	 */
+	private routes (): void {
 		const options = {
 			schema: {
 				response: {
@@ -179,15 +223,17 @@ class Server {
 				}
 			}
 		};
-		this.server.get('/', options, (request, response) => {
-			response.status(200).send({ info: `${env.apiName} server is up and running. Find docs at /docs.` });
-		});
 		this.server.get(`/${env.apiVersion}/close`, options, (request, response) => {
 			response.status(200).send({ info: `${env.apiName} server closing gracefully.` });
 			this.bye();
 		});
 		this.server.register(routes, { prefix: `/${env.apiVersion}` });
 	}
+
+	/**
+	 * Starts the server.
+	 * This method is called when the server is starting up.
+	 */
 	public async start (): Promise<void> {
 		this.server
 			.listen({ port: this.port, host: this.host })
