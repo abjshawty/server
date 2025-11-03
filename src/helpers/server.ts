@@ -182,7 +182,6 @@ class Server {
 	 */
 	private errorHandler (): void {
 		this.server.setErrorHandler((error: FastifyError, request: FastifyRequest, response: FastifyReply) => {
-			console.log("Handling error:", error);
 			this.server.log.error(error);
 			response.status(error.statusCode ? error.statusCode : 500).send(error);
 		});
@@ -214,6 +213,7 @@ class Server {
 	private routes (): void {
 		const options = {
 			schema: {
+				tags: ['Server'],
 				response: {
 					200: {
 						type: 'object',
@@ -224,9 +224,14 @@ class Server {
 				}
 			}
 		};
-		this.server.get(`/${env.apiVersion}/close`, options, (request, response) => {
-			response.status(200).send({ info: `${env.apiName} server closing gracefully.` });
-			this.bye();
+		this.server.route({
+			method: 'GET',
+			url: `/${env.apiVersion}/close`,
+			schema: options.schema,
+			handler: (request, response) => {
+				response.status(200).send({ info: `${env.apiName} server closing gracefully.` });
+				this.bye();
+			}
 		});
 		this.server.register(routes, { prefix: `/${env.apiVersion}` });
 	}
