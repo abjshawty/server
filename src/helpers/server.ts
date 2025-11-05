@@ -224,6 +224,7 @@ class Server {
 				}
 			}
 		};
+		// Shutdown route
 		this.server.route({
 			method: 'GET',
 			url: `/${env.apiVersion}/close`,
@@ -231,6 +232,14 @@ class Server {
 			handler: (request, response) => {
 				response.status(200).send({ info: `${env.apiName} server closing gracefully.` });
 				this.bye();
+			}
+		});
+		// Info route
+		this.server.route({
+			method: 'GET',
+			url: `/${env.apiVersion}/info`,
+			handler: (request, response) => {
+				response.status(200).send({ info: `${env.apiName} server info` });
 			}
 		});
 		this.server.register(routes, { prefix: `/${env.apiVersion}` });
