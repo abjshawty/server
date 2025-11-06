@@ -39,3 +39,8 @@ export const sign_out = async (request: FastifyRequest, reply: FastifyReply) => 
     const data = await result.json();
     reply.send({ success: true, message: 'User logged out successfully', data });
 };
+
+export const handler = async (url: Request) => {
+    const result = auth.handler(url);
+    return result;
+};

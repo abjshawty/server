@@ -1,7 +1,7 @@
 import { FastifyPluginCallback } from "fastify";
 import { Post as schema } from "../schemas";
 import { Post as api } from "../api";
-// import { auth } from "../utils";
+import { imageKit } from "../utils";
 
 const routes: FastifyPluginCallback = server => {
     server.route({
@@ -42,6 +42,13 @@ const routes: FastifyPluginCallback = server => {
         schema: schema.recycle,
         // preHandler: auth,
         handler: api.recycle
+    });
+    server.route({
+        method: 'POST',
+        url: '/upload',
+        schema: schema.upload,
+        // preHandler: auth,
+        handler: api.upload
     });
 };
 export default routes;

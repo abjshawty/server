@@ -308,3 +308,6 @@ export const update: schema = {
 export const recycle: schema = {
     tags,
 };
+export const upload: schema = {
+    tags,
+};
