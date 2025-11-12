@@ -1,6 +1,6 @@
 {
   "name": "server-template",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": "false",
   "description": "Functional template for a backend server, using Fastify and Prisma",
   "keywords": [
@@ -28,7 +28,9 @@
     "test": "jest --watchAll",
     "format": "prettier --write ./src",
     "db:gen": "prisma generate",
-    "db:migrate": "prisma migrate dev --name dev",
+    "db:migrate": "prisma migrate deploy",
+    "db:dev": "prisma migrate dev --name dev",
+    "db:push": "prisma db push",
     "db:reset": "yarn && prisma migrate reset --force && prisma migrate dev --name dev",
     "create": "prisma generate && ts-node src/helpers/generator.ts && prettier --write ./src",
     "db:auth": "npx @better-auth/cli generate --config ./src/utils",

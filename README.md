@@ -1,30 +1,34 @@
 # Server Template
 
-A production-ready backend server template built with Fastify, Prisma, and TypeScript. This template provides a solid foundation for building scalable and maintainable API services.
+A production-ready backend server template built with Fastify, Prisma, and TypeScript. This template provides a solid foundation for building scalable and maintainable API services with built-in authentication, database management, and modern development tools.
 
 ## Features
 
 - **Fastify** - High performance web framework with automatic OpenAPI documentation
 - **Prisma** - Type-safe database client with migrations
 - **TypeScript** - Full type safety across the stack
+- **Better Auth** - Modern authentication system with session management
 - **JWT Authentication** - Secure API endpoints with @fastify/jwt
 - **File Uploads** - Handle multipart file uploads with @fastify/multipart
 - **Swagger UI** - Interactive API documentation at root path
 - **CORS & Helmet** - Security best practices built-in
 - **Structured Logging** - Pino logger with file and console outputs
 - **Error Handling** - Centralized error handling with custom error classes
+- **Redis Integration** - Optional caching and session storage
 - **Kafka Integration** - Optional event streaming support
-- **Testing** - Jest test framework
+- **Testing** - Jest test framework with coverage
+- **Code Generation** - Automated CRUD endpoint generation
 - **Docker Support** - Containerized deployment ready
 
 ## Prerequisites
 
 - Node.js 18+
-- Yarn or npm package manager
+- Yarn package manager (recommended)
 - MySQL, PostgreSQL, or MongoDB (configured via DATABASE_URL)
 - Docker & Docker Compose (optional, for containerized deployment)
 - Kafka (optional, for event streaming)
 - Redis (optional, for caching/sessions)
+- AWS S3 (optional, for file storage)
 
 ## Getting Started
 
@@ -34,6 +38,14 @@ A production-ready backend server template built with Fastify, Prisma, and TypeS
 git clone https://github.com/abjshawty/server.git
 cd server
 ```
+
+**Quick Start**: For a complete setup with database initialization and authentication:
+
+```bash
+yarn db:init
+```
+
+This will install dependencies, reset the database, generate auth tables, and run migrations.
 
 ### 2. Install dependencies
 
@@ -74,29 +86,69 @@ KAFKAJS_NO_PARTITIONER_WARNING=1       # Disable partitioner warning
 # Redis (optional)
 REDIS_URL=''                           # Redis connection URL
 
-# Additional integrations available in .env.example:
-# - AWS S3 (file storage)
-# - Mail (SMTP configuration)
-# - Paydunya (payment gateway)
-# - Twilio (SMS/messaging)
+# AWS S3 (optional - for file storage)
+ACCESS_KEY=''                          # AWS access key
+SECRET_ACCESS_KEY=''                   # AWS secret access key
+BUCKET_NAME=''                         # S3 bucket name
+BUCKET_REGION=''                       # S3 bucket region
+
+# Mail (optional - SMTP configuration)
+MAIL_HOST='smtp.domain.email'         # SMTP host
+MAIL_PORT='587'                        # SMTP port
+MAIL_USER='admin@domain.com'           # SMTP user
+MAIL_PASSWORD=''                       # SMTP password
+MAIL_SECURE='0'                        # Use TLS (1 for true, 0 for false)
+
+# Paydunya (optional - payment gateway)
+PAYDUNYA_MASTER_KEY=''                 # Paydunya master key
+PAYDUNYA_PRIVATE_KEY=''                # Paydunya private key
+PAYDUNYA_PUBLIC_KEY=''                 # Paydunya public key
+PAYDUNYA_TOKEN=''                      # Paydunya token
+PAYDUNYA_MODE=''                       # Mode: 'test' or 'live'
+
+# Twilio (optional - SMS/messaging)
+TWILIO_ACCOUNT_SID=''                  # Twilio account SID
+TWILIO_AUTH_TOKEN=''                   # Twilio auth token
+TWILIO_MESSAGING_SERVICE_SID=''        # Twilio messaging service SID
 ```
 
 ### 4. Database Setup
 
-Run database migrations:
+#### Quick Setup (Recommended)
+
+For a complete database setup including authentication:
+
+```bash
+yarn db:init
+```
+
+This command will:
+1. Install all dependencies
+2. Reset the database
+3. Generate Better Auth tables
+4. Run all migrations
+
+#### Manual Setup
+
+Alternatively, run migrations manually:
 
 ```bash
 # Generate Prisma Client
 yarn db:gen
-# or
-npx prisma generate
 
-# Run migrations
+# Run migrations (production)
 yarn db:migrate
-# or
-npx prisma migrate dev --name dev
 
-# Reset database (if needed)
+# Run migrations (development)
+yarn db:dev
+
+# Push schema changes without migration
+yarn db:push
+
+# Generate Better Auth tables
+yarn db:auth
+
+# Reset database (development only)
 yarn db:reset
 ```
 
@@ -205,8 +257,12 @@ server/
 - `yarn test` - Run tests in watch mode with Jest
 - `yarn format` - Format code with Prettier
 - `yarn db:gen` - Generate Prisma client from schema
-- `yarn db:migrate` - Run database migrations
+- `yarn db:migrate` - Run database migrations (production)
+- `yarn db:dev` - Run database migrations (development)
+- `yarn db:push` - Push schema changes without creating migration
 - `yarn db:reset` - Reset database, reinstall dependencies, and run migrations
+- `yarn db:auth` - Generate Better Auth tables
+- `yarn db:init` - Complete database initialization (install, reset, auth, migrate)
 - `yarn create` - Generate CRUD endpoints (controllers, services, routes, schemas) and format code
 
 ## Architecture
@@ -231,9 +287,22 @@ HTTP Request → Route → Auth Middleware → API Handler → Service → Contr
 
 ## Authentication
 
-JWT authentication is built-in and can be enabled/disabled via the `AUTH_ENABLED` environment variable.
+This template includes two authentication systems:
 
-- Authentication middleware is located in `src/utils/auth.ts`
+### Better Auth (Recommended)
+
+Modern authentication system with built-in session management:
+
+- Configuration located in `src/utils/auth.ts`
+- Supports multiple authentication strategies
+- Session-based authentication with database persistence
+- Generate auth tables with `yarn db:auth`
+
+### JWT Authentication
+
+Traditional JWT-based authentication:
+
+- Can be enabled/disabled via the `AUTH_ENABLED` environment variable
 - Routes can be protected by adding the `auth` preHandler
 - JWT secret must be configured in `.env` as `JWT_SECRET`
 
