@@ -1,6 +1,6 @@
 {
   "name": "server-template",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "private": "false",
   "description": "Functional template for a backend server, using Fastify and Prisma",
   "keywords": [
@@ -34,7 +34,8 @@
     "db:reset": "yarn && prisma migrate reset --force && prisma migrate dev --name dev",
     "create": "prisma generate && ts-node src/helpers/generator.ts && prettier --write ./src",
     "db:auth": "npx @better-auth/cli generate --config ./src/utils",
-    "db:init": "yarn && yarn db:reset && yarn db:auth && yarn db:migrate"
+    "db:init": "yarn && yarn db:reset && yarn db:auth && yarn db:migrate",
+    "update": "npx npm-check-updates -u && yarn"
   },
   "dependencies": {
     "@fastify/cors": ">=11.1.0",
