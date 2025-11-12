@@ -1,6 +1,6 @@
 {
   "name": "server-template",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": "false",
   "description": "Functional template for a backend server, using Fastify and Prisma",
   "keywords": [

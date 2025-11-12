@@ -1,6 +1,19 @@
 import { Kafka, Producer, Consumer } from 'kafkajs';
-import { Kafka as messages } from '../messages';
-import { env } from '.';
+import { env } from '../helpers';
+import * as locales from '../locales';
+let lang: {
+	Kafka: any;
+};
+if (env.language == 'en-US') {
+	lang = locales.en;
+} else {
+	lang = locales.fr;
+}
+const messages = {
+	start: () => console.log(`${lang.Kafka.start}`),
+	error: (error: Error, message?: string) => console.log(`${lang.Kafka.error}, ${message}:\n${error.message}`),
+	close: () => console.log(`${lang.Kafka.close}`)
+};
 
 /**
  * Kafka worker class that handles Kafka operations.

@@ -10,7 +10,8 @@ import jwt from '@fastify/jwt';
 import routes from '../routes';
 import death from 'death';
 import path from 'path';
-import { env, kafka } from '.';
+import { env } from '.';
+import { kafka } from '../utils';
 
 class Server {
 	private kafka: typeof kafka;
@@ -43,14 +44,14 @@ class Server {
 							}
 						},
 						// Info Console (commented out by default)
-						// {
-						// 	target: 'pino-pretty',
-						// 	level: 'info',
-						// 	options: {
-						// 		colorize: true,
-						// 		translateTime: true
-						// 	}
-						// },
+						{
+							target: 'pino-pretty',
+							level: 'info',
+							options: {
+								colorize: true,
+								translateTime: true
+							}
+						},
 						// Info File
 						{
 							target: 'pino-pretty',
