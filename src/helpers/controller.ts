@@ -5,7 +5,8 @@
  */
 
 // Require is used here because of TypeScript errors with pdfkit-table types
-const pdfTable = require('pdfkit-table');
+// const pdfTable = require('pdfkit-table');
+import * as pdfTable from 'pdfkit-table';
 import { Parser } from 'json2csv';
 import { FastifyReply } from 'fastify';
 import { client } from '../db';
@@ -452,8 +453,8 @@ class Controller<T extends object> {
 
 			const headers = Object.keys(data[0]);
 			const rows = data.map(item => Object.values(item as object));
-
-			const doc = new pdfTable({
+			// @ts-ignore
+			const doc = new pdfTable.default({
 				margin: 30,
 				size: 'A4'
 			});
@@ -466,7 +467,9 @@ class Controller<T extends object> {
 			return new Promise((resolve, reject) => {
 				const chunks: any[] = [];
 
+				// @ts-ignore
 				doc.on('data', (chunk: any) => chunks.push(chunk));
+				// @ts-ignore
 				doc.on('end', () => {
 					const result = Buffer.concat(chunks);
 					resolve(
@@ -478,10 +481,12 @@ class Controller<T extends object> {
 				});
 
 				doc.table(table, {
+					// @ts-ignore
 					prepareHeader: () => doc.font('Helvetica-Bold').fontSize(12),
+					// @ts-ignore
 					prepareRow: () => doc.font('Helvetica').fontSize(10)
 				});
-
+				// @ts-ignore
 				doc.end();
 			});
 		} catch (error: any) {

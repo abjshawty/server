@@ -4,7 +4,6 @@ import { env } from '.';
 
 class RedisService {
     private client: RedisClientType;
-    private isConnected: boolean = false;
     constructor () {
         this.client = this.init();
     }
@@ -13,19 +12,15 @@ class RedisService {
             url: env.redisUrl
         });
         this.client.on('error', (err) => {
-            console.log('Redis Client Error', err);
+            console.error('Redis Client Error', err);
         });
         this.connect();
         return this.client;
     }
     async connect (): Promise<boolean> {
         await this.client.connect()
-            .then(() => {
-                console.log('Redis Client connected');
-                this.isConnected = true;
-            })
             .catch((err) => {
-                console.log('Redis Client Error', err);
+                console.error('Redis Client Error', err);
                 throw err;
             });
         return true;
@@ -50,22 +45,16 @@ class RedisService {
     }
     async set (key: string, value: string): Promise<boolean> {
         await this.client.set(key, value)
-            .then(() => {
-                console.log('Redis Client set');
-            })
             .catch((err) => {
-                console.log('Redis Client Set Error', err);
+                console.error('Redis Client Set Error', err);
                 throw err;
             });
         return true;
     }
     async del (key: string): Promise<boolean> {
         await this.client.del(key)
-            .then(() => {
-                console.log('Redis Client del');
-            })
             .catch((err) => {
-                console.log('Redis Client Del Error', err);
+                console.error('Redis Client Del Error', err);
                 throw err;
             });
         return true;
@@ -73,10 +62,8 @@ class RedisService {
     disconnect (): void {
         try {
             this.client.destroy();
-            console.log('Redis Client disconnected');
-            // this.isConnected = false;
         } catch (error) {
-            console.log('Redis Client Error', error);
+            console.error('Redis Client Error', error);
             throw error;
         }
     }

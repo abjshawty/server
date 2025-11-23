@@ -4,20 +4,22 @@
  */
 
 import { Database as messages } from '../messages';
-import { PrismaClient } from '@prisma/client';
-
+import { PrismaClient } from './orm/client';
+import { PrismaPg } from "@prisma/adapter-pg";
+import adapter from "./adapter";
 /**
  * Prisma client instance for database operations.
  * Use this client to perform all database queries.
  *
  * @example
- * // Import and use the client
+ * * Import and use the client
  * import { client } from './db';
  *
- * // Example query
+ * * Example query
  * const users = await client.user.findMany();
  */
-export const client = new PrismaClient();
+
+export const client = new PrismaClient({ adapter });
 
 /**
  * Gracefully shuts down the database connection.
@@ -25,7 +27,7 @@ export const client = new PrismaClient();
  * all database connections are properly closed.
  *
  * @example
- * // On application shutdown
+ * * On application shutdown
  * import { die } from './db';
  *
  * process.on('SIGTERM', die);
