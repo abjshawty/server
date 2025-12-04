@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { Post as Build } from "@prisma/client";
+import { Post as Build } from "client";
 import { Post as service } from "../services";
 import { imageKit } from "../utils";
 

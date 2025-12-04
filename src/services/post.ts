@@ -1,4 +1,4 @@
-import { Post as Build } from "@prisma/client";
+import { Post as Build } from "client";
 import { post as controller } from "../controllers";
 import { ServiceFactory } from "../helpers";
 class Service extends ServiceFactory<Build> { }
