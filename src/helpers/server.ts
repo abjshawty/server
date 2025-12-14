@@ -7,6 +7,8 @@ import swagger from '@fastify/swagger';
 import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import compress from '@fastify/compress';
+import { toErrorResponse } from '../errors';
 import routes from '../routes';
 import death from 'death';
 import path from 'path';
@@ -124,6 +126,15 @@ class Server {
 		if (env.jwtSecret === undefined) throw new Error('JWT secret not set');
 		this.server.register(jwt, { secret: env.jwtSecret });
 		this.server.register(multipart);
+
+		if (env.compressionEnabled) {
+			this.server.register(compress, {
+				global: true,
+				encodings: ['gzip', 'br'],
+				threshold: 1024
+			});
+		}
+
 		this.helmet();
 		this.hooks();
 		this.cors();
@@ -183,8 +194,11 @@ class Server {
 	 */
 	private errorHandler (): void {
 		this.server.setErrorHandler((error: FastifyError, request: FastifyRequest, response: FastifyReply) => {
-			this.server.log.error(error);
-			response.status(error.statusCode ? error.statusCode : 500).send(error);
+			// Keep full error in logs; sanitize what we return to clients
+			this.server.log.error({ err: error, url: request.url, method: request.method }, 'Request error');
+
+			const formatted = toErrorResponse(error);
+			response.status(formatted.statusCode).send(formatted.body);
 		});
 	}
 

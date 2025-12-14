@@ -3,7 +3,7 @@ import { name, version } from '../../package.json';
 
 export type role = 'producer' | 'consumer' | 'both' | 'none';
 
-process.env.node_env !== 'production' ? config() : '';
+process.env.NODE_ENV !== 'production' ? config() : '';
 // * The following variables are used to configure the server
 // * The variables are read from the .env file
 // * The ideal scenario is to make as much of the .env file optional as possible
@@ -25,6 +25,10 @@ export const kafkaGroupId: string = process.env.KAFKA_GROUP_ID || 'null';
 export const language: string = process.env.LANGUAGE || 'en-US';
 export const murder: () => void = () => process.exit(0);
 export const port: number = process.env.APP_PORT ? parseInt(process.env.APP_PORT) : 3000;
+
+// API Performance
+export const compressionEnabled: boolean = process.env.COMPRESSION_ENABLED ? process.env.COMPRESSION_ENABLED === '1' : true;
+
 export const redisUrl: string = process.env.REDIS_URL || '';
 export const topics: string[] = process.env.KAFKA_TOPICS ? process.env.KAFKA_TOPICS.split(',') : [];
 export const role: role = (process.env.KAFKA_ROLE as role) || 'none';

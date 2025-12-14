@@ -1,24 +1,29 @@
 /**
  * Basic test suite for server template
  */
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const dbEnabled = process.env.TEST_DB_ENABLED === '1';
+const itIfDb = dbEnabled ? it : it.skip;
 
 describe('Server Template - Basic Tests', () => {
-	describe('Database Connection', () => {
-		it('should connect to the database', async () => {
-			// Test that Prisma client can connect
-			await expect(prisma.$connect()).resolves.not.toThrow();
-		});
+		describe('Database Connection', () => {
+			itIfDb('should connect to the database', async () => {
+				const { PrismaClient } = await import('@prisma/client');
+				const prisma = new PrismaClient();
+				await expect(prisma.$connect()).resolves.not.toThrow();
+				await prisma.$disconnect();
+			});
 
-		it('should execute a raw query', async () => {
-			// Test basic database query execution
-			const result = await prisma.$queryRaw`SELECT 1 as value`;
-			expect(result).toBeDefined();
-			expect(Array.isArray(result)).toBe(true);
+			itIfDb('should execute a raw query', async () => {
+				const { PrismaClient } = await import('@prisma/client');
+				const prisma = new PrismaClient();
+				await prisma.$connect();
+				const result = await prisma.$queryRaw`SELECT 1 as value`;
+				expect(result).toBeDefined();
+				expect(Array.isArray(result)).toBe(true);
+				await prisma.$disconnect();
+			});
 		});
-	});
 
 	describe('Environment Configuration', () => {
 		it('should have required environment variables', () => {

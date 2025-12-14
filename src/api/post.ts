@@ -30,11 +30,11 @@ export const recycle = async (request: FastifyRequest<{ Params: { id: string; };
 
 export const upload = async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.isMultipart) {
-        return reply.status(400).send({ success: false, message: 'File is required' });
+        return reply.status(400).send({ success: false, code: 'BAD_REQUEST', message: 'Multipart/form-data is required' });
     }
     const file = await request.file();
     if (!file) {
-        return reply.status(400).send({ success: false, message: 'File is required' });
+        return reply.status(400).send({ success: false, code: 'BAD_REQUEST', message: 'File is required' });
     }
     const buffer = await file.toBuffer();
     const result = await imageKit.upload(buffer, file.filename, '/post');
