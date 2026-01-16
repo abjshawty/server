@@ -54,11 +54,26 @@ export const sendMail = async (mailOptions: {
     }
 };
 
-export const test = async (appName: string, appVersion: string, from: string, to: string) => {
-    return await sendMail({
-        from,
-        to,
-        subject: `Health Check for ${appName} v${appVersion}`,
-        html: "<p>The email service is <b>running</b>!</p>",
+export const test = async () => {
+    // return await sendMail({
+    //     from,
+    //     to,
+    //     subject: `Health Check for ${appName} v${appVersion}`,
+    //     html: "<p>The email service is <b>running</b>!</p>",
+    // });
+
+    return await getResendInstance().emails.send({
+        from: env.email_account,
+        to: env.email_test_account,
+        template: {
+            id: "api-gateway-health-report",
+            variables: {
+                APP_NAME: env.apiName,
+                APP_VERSION: env.apiVersion,
+                DATENOW: new Date().toISOString(),
+                REPO_URL: env.repo_url,
+                UPTIME: env.uptime(),
+            },
+        }
     });
 };

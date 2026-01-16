@@ -1,5 +1,5 @@
 import { config } from 'dotenv';
-import { name, version } from '../../package.json';
+import { name, version, repository } from '../../package.json';
 
 export type role = 'producer' | 'consumer' | 'both' | 'none';
 
@@ -49,6 +49,9 @@ export const imageKitApiKey: string | undefined = process.env.IMAGEKIT_API_KEY;
 
 export const email_account: string = process.env.EMAIL_ACCOUNT || 'onboarding@resend.dev';
 export const email_test_account: string = process.env.EMAIL_TEST_ACCOUNT || 'delivered@resend.dev';
+
+export const uptime: () => number = () => process.uptime();
+export const repo_url: string = repository.url || 'https://github.com';
 
 // TODO: Paydunya Configuration
 // TODO: Logging Configuration (Add Debug option to server template to avoid log floods)
