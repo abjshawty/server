@@ -46,6 +46,10 @@ export const discordClientSecret: string | undefined = process.env.DISCORD_CLIEN
 // ImageKit Configuration
 export const imageKitApiKey: string | undefined = process.env.IMAGEKIT_API_KEY;
 
+
+export const email_account: string = process.env.EMAIL_ACCOUNT || 'onboarding@resend.dev';
+export const email_test_account: string = process.env.EMAIL_TEST_ACCOUNT || 'delivered@resend.dev';
+
 // TODO: Paydunya Configuration
 // TODO: Logging Configuration (Add Debug option to server template to avoid log floods)
 // TODO: Twilio Configuration
