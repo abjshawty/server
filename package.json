@@ -1,12 +1,16 @@
 {
   "name": "bun-server",
   "version": "0.0.0",
+  "type": "module",
   "author": "Timmy Kouadio-Bhegnin <kouadiobhegnino@gmail.com> (https://devfrombabi.ace.me/)",
   "repository": {
     "type": "git",
     "url": "https://github.com/abjshawty/server.git"
   },
   "module": "src/index.ts",
+  "dependencies": {
+    "elysia": "^1.4.22"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
@@ -38,9 +42,5 @@
     "dev": "bun --watch src/index.ts",
     "dev:debug": "bun --watch --inspect src/index.ts",
     "dev:watch": "bun --hot src/index.ts"
-  },
-  "type": "module",
-  "dependencies": {
-    "elysia": "^1.4.22"
   }
 }
