@@ -1,0 +1,43 @@
+{
+  "name": "bun-server",
+  "version": "0.0.0",
+  "author": "Timmy Kouadio-Bhegnin <kouadiobhegnino@gmail.com> (https://devfrombabi.ace.me/)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abjshawty/server.git"
+  },
+  "module": "src/index.ts",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "bugs": {
+    "url": "https://github.com/abjshawty/server/issues",
+    "email": "kouadiobhegnino@gmail.com"
+  },
+  "contributors": [
+    "Timmy Kouadio-Bhegnin <kouadiobhegnino@gmail.com> (https://devfrombabi.ace.me/)"
+  ],
+  "description": "Functional template for a backend server, using Bun & Convex",
+  "engineStrict": true,
+  "engines": {
+    "bun": ">=1.3.6"
+  },
+  "homepage": "https://github.com/abjshawty/server#readme",
+  "keywords": [
+    "bun",
+    "convex",
+    "server"
+  ],
+  "license": "WTFPL",
+  "private": false,
+  "scripts": {
+    "start": "bun src/index.ts",
+    "dev": "bun --watch src/index.ts",
+    "dev:debug": "bun --watch --inspect src/index.ts",
+    "dev:watch": "bun --hot src/index.ts"
+  },
+  "type": "module"
+}
