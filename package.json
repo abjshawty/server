@@ -3,7 +3,13 @@
   "version": "0.3.6",
   "private": "false",
   "type": "module",
+  "module": "src/index.ts",
   "description": "Functional template for a backend server, using Fastify and Prisma",
+  "author": "abjshawty",
+  "homepage": "https://github.com/abjshawty/server#readme",
+  "contributors": [
+    "Timmy Kouadio-Bhegnin <kouadiobhegnino@gmail.com> (https://abjshawty.dev)"
+  ],
   "engineStrict": true,
   "engines": {
     "node": ">=22.14.0",
@@ -25,9 +31,6 @@
     "url": "https://github.com/abjshawty/server/issues",
     "email": "kouadiobhegnino@gmail.com"
   },
-  "contributors": [
-    "Timmy Kouadio-Bhegnin <kouadiobhegnino@gmail.com> (https://abjshawty.dev)"
-  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
@@ -85,7 +88,6 @@
     "tsx": "^4.20.6",
     "typescript": ">=5.9.3"
   },
-  "author": "abjshawty",
   "config": {},
   "license": "WTFPL",
   "jest": {
