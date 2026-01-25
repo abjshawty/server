@@ -10,7 +10,6 @@ export abstract class Service {
             throw status(400, 'Invalid post data');
         }
         const posts = await convex.mutation(api.post.create, { title, content });
-        console.log("posts", posts);
         return {
             id: posts,
             title,
