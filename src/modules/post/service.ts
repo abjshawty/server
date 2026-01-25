@@ -12,4 +12,9 @@ export abstract class Service {
             content,
         };
     }
+
+    static async list () { }
+    static async get () { }
+    static async update () { }
+    static async delete () { }
 }

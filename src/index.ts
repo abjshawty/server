@@ -1,9 +1,7 @@
-import { Elysia } from 'elysia';
-import { openapi } from '@elysiajs/openapi';
-import { post } from './modules/post';
+import server from './modules';
 
-new Elysia()
-    .use(openapi())
-    .use(post)
-    .get('/', (ctx) => ctx.redirect("/openapi"))
-    .listen(3000);
+function main () {
+    server.listen(3000);
+}
+
+main();
