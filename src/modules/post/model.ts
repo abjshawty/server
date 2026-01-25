@@ -24,5 +24,11 @@ export namespace Model {
         content: t.String(),
     });
 
+    export const updateBody = t.Object({
+        title: t.Optional(t.String()),
+        content: t.Optional(t.String()),
+    });
+
     export type createResponse = typeof createResponse.static;
+    export type updateBody = typeof updateBody.static;
 }
