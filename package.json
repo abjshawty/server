@@ -10,6 +10,7 @@
   "module": "src/index.ts",
   "dependencies": {
     "@elysiajs/openapi": "^1.4.14",
+    "convex": "^1.31.6",
     "elysia": "^1.4.22"
   },
   "devDependencies": {
