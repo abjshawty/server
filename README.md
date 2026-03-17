@@ -16,7 +16,8 @@ This is a rewrite of a previous template that used Node.js, Fastify, and Prisma.
 
 ## Core technologies
 
-- **Bun Server** — A fast, all-in-one JavaScript runtime. (Considering upgrading to Elysia if necessary)
+- **Elysia** — Ergonomic HTTP framework running on Bun, used as the main server entrypoint.
+- **Bun** — A fast, all-in-one JavaScript runtime.
 - **Convex** — A serverless backend framework for managing databases.
 - **TypeScript** — JavaScript with static types.
 
@@ -28,9 +29,9 @@ This is a rewrite of a previous template that used Node.js, Fastify, and Prisma.
 - **Storage**: S3 Buckets
 - **Cache**: Redis
 - **Notifications**: Email via Resend/NodeMailer & SMS via Twilio
-- **Analytics**: PostHog
+- **Analytics**: Axiom (with optional adapters for other providers like PostHog)
 - **Security**: Rate Limiting, IP Blocking, API Key Management
-- **Logging**: Bun Logger
+- **Logging**: Bun Logger (or compatible alternatives)
 - **Monitoring**: Sentry
 
 ## Installation
