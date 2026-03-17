@@ -1,7 +1,3 @@
-import server from './modules';
+import server from "./modules";
 
-function main () {
-    server.listen(3000);
-}
-
-main();
+server.listen(3000);
