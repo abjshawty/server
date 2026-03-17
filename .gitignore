@@ -36,6 +36,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Legtacy files
 *.old.ts
 
+# Auth database (better-auth SQLite file)
+*.db
+
 # Convex files
 # You should commit convex/_generated if you want to share your Convex schema with other developers
 convex/_generated
